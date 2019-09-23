@@ -245,7 +245,7 @@ function CMegaDotaGameMode:DamageFilter(event)
 	local killer = EntIndexToHScript(event.entindex_attacker_const)
 	local death_unit = EntIndexToHScript(event.entindex_victim_const)
 
-	if _G.tableFeedingStatistics[death_unit] and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (PlayerResource:GetSelectedHeroEntity(death_unit:GetPlayerID())) and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
+	if death_unit:IsRealHero() and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (PlayerResource:GetSelectedHeroEntity(death_unit:GetPlayerID())) and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
 		death_unit:Kill(nil, death_unit)
 	end
 
