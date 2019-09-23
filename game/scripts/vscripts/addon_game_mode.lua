@@ -355,7 +355,7 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 		elseif spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") then
 			local needTimeDebuffFeed = spawnedUnit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
 			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = needTimeDebuffFeed, addRespawnTime = spawnedUnit:GetRespawnTime() * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE })
-		elseif needToken < TROLL_FEED_NEED_TOKEN_TO_BUFF then
+		elseif needToken <= TROLL_FEED_NEED_TOKEN_TO_BUFF then
 			spawnedUnit:AddNewModifier(spawnedUnit, nil, tokenCouter, { duration = TROLL_FEED_TOKEN_DURATION })
 			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_feed_token", { duration = TROLL_FEED_TOKEN_DURATION })
 			spawnedUnit:SetModifierStackCount(tokenCouter, spawnedUnit, needToken)
