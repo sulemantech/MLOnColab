@@ -3,6 +3,8 @@ require("common/utils")
 require("common/match_events")
 require("common/webapi")
 require("common/patreons")
+require("common/patreon_couriers")
+require("common/selection")
 
 require("common/disable_help")
 require("common/smart_random")

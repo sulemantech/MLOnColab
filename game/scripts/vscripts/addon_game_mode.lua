@@ -13,6 +13,7 @@ WebApi.customGame = "Dota12v12"
 
 LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_patreon_courier","common/patreon_couriers", LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
 
@@ -253,6 +254,7 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 	if spawnedUnit:IsRealHero() then
 		-- Silencer Nerf
 		Timers:CreateTimer(1, function()
+			
 			if spawnedUnit:HasModifier("modifier_silencer_int_steal") then
 				spawnedUnit:RemoveModifierByName('modifier_silencer_int_steal')
 				spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_silencer_new_int_steal", {})
@@ -631,11 +633,12 @@ RegisterCustomEventListener("GetKicks", function(data)
 end)
 
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
-	-- DeepPrintTable({ order = filterTable })
+	--DeepPrintTable({ order = filterTable })
 	local orderType = filterTable.order_type
 	local playerId = filterTable.issuer_player_id_const
 	local target = filterTable.entindex_target ~= 0 and EntIndexToHScript(filterTable.entindex_target) or nil
 	local ability = filterTable.entindex_ability ~= 0 and EntIndexToHScript(filterTable.entindex_ability) or nil
+
 	-- `entindex_ability` is item id in some orders without entity
 	if ability and not ability.GetAbilityName then ability = nil end
 	local abilityName = ability and ability:GetAbilityName() or nil
@@ -649,6 +652,12 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	if disableHelpResult == false then
 		return false
 	end
+
+	patreonCourierResult, filterTable = PatreonCouriers.ExecuteOrderFilter(filterTable)
+	if patreonCourierResult == false then
+		return false
+	end
+	
 
 	if orderType == DOTA_UNIT_ORDER_CAST_POSITION then
 		if abilityName == "item_ward_dispenser" or abilityName == "item_ward_sentry" or abilityName == "item_ward_observer" then
