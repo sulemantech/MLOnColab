@@ -2,6 +2,8 @@ Patreons = Patreons or {}
 Patreons.playerSettings = Patreons.playerSettings or {}
 Patreons.openPaymentWindows = Patreons.openPaymentWindows or {}
 
+PATREONCOURIERS = PATREONCOURIERS or {}
+
 local colorNames = {
 	White = Vector(255, 255, 255),
 	Red = Vector(200, 0, 0),
@@ -45,8 +47,19 @@ function Patreons:GiveOnSpawnBonus(playerId)
 	local hero = PlayerResource:GetSelectedHeroEntity(playerId)
 	local patreonSettings = Patreons:GetPlayerSettings(playerId)
 
+	--if IsInToolsMode then patreonSettings.level = 1 end
+
 	if patreonSettings.level >= 1 then
 		hero:AddNewModifier(hero, nil, "modifier_donator", { patron_level = patreonSettings.level })
+
+		-- Give the patreon courier
+		PATREONCOURIERS = PATREONCOURIERS or {}
+		local patreonCour = CreateUnitByName("npc_dota_patreon_courier",hero:GetAbsOrigin(),true,hero,hero:GetOwner(),hero:GetTeamNumber())
+		patreonCour:SetOwner(hero:GetOwner())
+		patreonCour:SetControllableByPlayer(playerId,false)
+		patreonCour:AddNewModifier(hero,nil,"modifier_patreon_courier",{})
+
+		PATREONCOURIERS[playerId] = patreonCour
 	end
 
 	if patreonSettings.level >= 1 and patreonSettings.bootsEnabled then
