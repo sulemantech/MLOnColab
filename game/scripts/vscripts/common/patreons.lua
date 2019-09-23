@@ -47,11 +47,13 @@ function Patreons:GiveOnSpawnBonus(playerId)
 	local hero = PlayerResource:GetSelectedHeroEntity(playerId)
 	local patreonSettings = Patreons:GetPlayerSettings(playerId)
 
-	--if IsInToolsMode then patreonSettings.level = 1 end
+	if IsInToolsMode then patreonSettings.level = 2 end
 
 	if patreonSettings.level >= 1 then
 		hero:AddNewModifier(hero, nil, "modifier_donator", { patron_level = patreonSettings.level })
+	end
 
+	if patreonSettings.level >= 2 then
 		-- Give the patreon courier
 		PATREONCOURIERS = PATREONCOURIERS or {}
 		local patreonCour = CreateUnitByName("npc_dota_patreon_courier",hero:GetAbsOrigin(),true,hero,hero:GetOwner(),hero:GetTeamNumber())
