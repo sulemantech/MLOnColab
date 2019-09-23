@@ -9,10 +9,10 @@ local XP_SCALE_FACTOR_FADEIN_SECONDS = (60 * 60) -- 60 minutes
 
 -- Anti feed system
 local TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER = 6000 -- Distance from allince Fountain
-local TROLL_FEED_BUFF_BASIC_TIME = (60 * 10)     -- 10 minutes
-local TROLL_FEED_EXTRA_RESPAWN_TIME = (60 * 2.5) -- 2.5 minutes
-local TROLL_FEED_INCREASE_BUFF_AFTER_DEATH_PER_TOKEN = 60 -- 1 minute
-local TROLL_FEED_RATIO_KD_TO_TRIGGER = -1 -- (Kill-Death)
+local TROLL_FEED_BUFF_BASIC_TIME = (60 * 10)    -- 10 minutes
+local TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE = 2.5 -- 2.5 minutes
+local TROLL_FEED_INCREASE_BUFF_AFTER_DEATH = 60 -- 1 minute
+local TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN = -5 -- (Kill-Death)
 local TROLL_FEED_NEED_TOKEN_TO_BUFF = 3
 local TROLL_FEED_TOKEN_TIME_DIES_WITHIN = (60 * 1.5) -- 1.5 minutes
 local TROLL_FEED_TOKEN_DURATION = (60 * 5) -- 5 minutes
@@ -25,6 +25,7 @@ WebApi.customGame = "Dota12v12"
 LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_troll_feed_token", 'anti_feed_system/modifier_troll_feed_token', LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_troll_feed_token_couter", 'anti_feed_system/modifier_troll_feed_token_couter', LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_troll_debuff_stop_feed", 'anti_feed_system/modifier_troll_debuff_stop_feed', LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
@@ -33,6 +34,7 @@ _G.lastDeathTimes = {}
 _G.tableRadiantHeroes = {}
 _G.tableDireHeroes = {}
 _G.tableFeedingStatistics = {}
+_G.tableFeedersRespawnTime = {}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -60,6 +62,8 @@ function CMegaDotaGameMode:InitGameMode()
 	GameRules:GetGameModeEntity():SetModifierGainedFilter( Dynamic_Wrap( CMegaDotaGameMode, "ModifierGainedFilter" ), self )
 	GameRules:GetGameModeEntity():SetRuneSpawnFilter( Dynamic_Wrap( CMegaDotaGameMode, "RuneSpawnFilter" ), self )
 	GameRules:GetGameModeEntity():SetExecuteOrderFilter(Dynamic_Wrap(CMegaDotaGameMode, 'ExecuteOrderFilter'), self)
+	GameRules:GetGameModeEntity():SetDamageFilter( Dynamic_Wrap( CMegaDotaGameMode, "DamageFilter" ), self )
+
 
 	GameRules:GetGameModeEntity():SetTowerBackdoorProtectionEnabled( true )
 	GameRules:GetGameModeEntity():SetPauseEnabled(IsInToolsMode())
@@ -193,7 +197,7 @@ function GetHeroKD(unit)
 	return (unit:GetKills() - unit:GetDeaths())
 end
 
-function ItWorstKD(unit) -- use minimun TROLL_FEED_RATIO_KD_TO_TRIGGER
+function ItWorstKD(unit) -- use minimun TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN
 	local unitTeam = unit:GetTeamNumber()
 	local focusTableHeroes
 
@@ -205,7 +209,7 @@ function ItWorstKD(unit) -- use minimun TROLL_FEED_RATIO_KD_TO_TRIGGER
 
 	for i, focusHero in pairs(focusTableHeroes) do
 		local unitKD = GetHeroKD(unit)
-		if unitKD > TROLL_FEED_RATIO_KD_TO_TRIGGER then
+		if unitKD > TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN then
 			return false
 		elseif (GetHeroKD(focusHero) <= unitKD) and (not(unit == focusHero))then
 			return false
@@ -233,6 +237,19 @@ function CMegaDotaGameMode:OnHeroPicked(event)
 		end
 	end
 
+end
+---------------------------------------------------------------------------
+-- Filter: DamageFilter
+---------------------------------------------------------------------------
+function CMegaDotaGameMode:DamageFilter(event)
+	local killer = EntIndexToHScript(event.entindex_attacker_const)
+	local death_unit = EntIndexToHScript(event.entindex_victim_const)
+
+	if _G.tableFeedingStatistics[death_unit] and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (PlayerResource:GetSelectedHeroEntity(death_unit:GetPlayerID())) and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
+		death_unit:Kill(nil, death_unit)
+	end
+
+	return true
 end
 
 ---------------------------------------------------------------------------
@@ -323,21 +340,25 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 
 end
 
-function CMegaDotaGameMode:OnNPCSpawned( event )
-	local spawnedUnit = EntIndexToHScript( event.entindex )
+function CMegaDotaGameMode:OnNPCSpawned(event)
+	local spawnedUnit = EntIndexToHScript(event.entindex)
 
 	if _G.tableFeedingStatistics[spawnedUnit] then
-		local tokenName = "modifier_troll_feed_token"
-		local currentStackToken = spawnedUnit:GetModifierStackCount(tokenName, spawnedUnit)
+		local tokenCouter = "modifier_troll_feed_token_couter"
+		local currentStackTokenCouter = spawnedUnit:GetModifierStackCount(tokenCouter, spawnedUnit)
+		local needToken = currentStackTokenCouter + 1
 
-		spawnedUnit:AddNewModifier(spawnedUnit, nil, tokenName, { duration = TROLL_FEED_TOKEN_DURATION })
-
-		local needToken = currentStackToken + 1
-		spawnedUnit:SetModifierStackCount(tokenName, spawnedUnit, needToken)
-
-		if needToken >= TROLL_FEED_NEED_TOKEN_TO_BUFF then
-			local timeBuff = TROLL_FEED_BUFF_BASIC_TIME + ((needToken - TROLL_FEED_NEED_TOKEN_TO_BUFF) * TROLL_FEED_INCREASE_BUFF_AFTER_DEATH_PER_TOKEN)
-			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = timeBuff, addRespawnTime = TROLL_FEED_EXTRA_RESPAWN_TIME })
+		if needToken > TROLL_FEED_NEED_TOKEN_TO_BUFF  then
+			spawnedUnit:RemoveModifierByName(tokenCouter)
+			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = TROLL_FEED_BUFF_BASIC_TIME, addRespawnTime = spawnedUnit:GetRespawnTime() * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE })
+			_G.tableFeedersRespawnTime[spawnedUnit] = GameRules:GetGameTime()
+		elseif spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") then
+			local needTimeDebuffFeed = spawnedUnit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
+			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = needTimeDebuffFeed, addRespawnTime = spawnedUnit:GetRespawnTime() * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE })
+		elseif needToken < TROLL_FEED_NEED_TOKEN_TO_BUFF then
+			spawnedUnit:AddNewModifier(spawnedUnit, nil, tokenCouter, { duration = TROLL_FEED_TOKEN_DURATION })
+			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_feed_token", { duration = TROLL_FEED_TOKEN_DURATION })
+			spawnedUnit:SetModifierStackCount(tokenCouter, spawnedUnit, needToken)
 		end
 	end
 

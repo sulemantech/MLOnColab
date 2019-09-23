@@ -21,7 +21,7 @@ end
 
 --------------------------------------------------------------------------------
 function modifier_troll_debuff_stop_feed:GetTexture()
-    return "shadow_shaman_voodoo"
+    return "lion_voodoo_fish"
 end
 
 --------------------------------------------------------------------------------
@@ -40,6 +40,11 @@ end
 --------------------------------------------------------------------------------
 function modifier_troll_debuff_stop_feed:GetModifierConstantRespawnTime()
     return self.addRespawnTime
+end
+
+--------------------------------------------------------------------------------
+function modifier_troll_debuff_stop_feed:IsDebuff()
+    return true
 end
 
 --------------------------------------------------------------------------------
