@@ -231,7 +231,7 @@ function CMegaDotaGameMode:OnHeroPicked(event)
 
 		if hero:GetTeamNumber() == DOTA_TEAM_BADGUYS then
 			table.insert(_G.tableDireHeroes, hero)
-			_G.tableRadiantHeroes[#tableDireHeroes].GetHeroName = function()
+			_G.tableDireHeroes[#tableDireHeroes].GetHeroName = function()
 				return tableDireHeroes[#tableDireHeroes].hero_name
 			end
 		end
