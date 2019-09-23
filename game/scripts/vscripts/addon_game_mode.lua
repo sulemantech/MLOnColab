@@ -6,15 +6,33 @@ local XP_SCALE_FACTOR_INITIAL = 2
 local XP_SCALE_FACTOR_FINAL = 2
 local XP_SCALE_FACTOR_FADEIN_SECONDS = (60 * 60) -- 60 minutes
 
+
+-- Anti feed system
+local TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER = 6000 -- Distance from allince Fountain
+local TROLL_FEED_BUFF_BASIC_TIME = (60 * 10)     -- 10 minutes
+local TROLL_FEED_EXTRA_RESPAWN_TIME = (60 * 2.5) -- 2.5 minutes
+local TROLL_FEED_INCREASE_BUFF_AFTER_DEATH_PER_TOKEN = 60 -- 1 minute
+local TROLL_FEED_RATIO_KD_TO_TRIGGER = -1 -- (Kill-Death)
+local TROLL_FEED_NEED_TOKEN_TO_BUFF = 3
+local TROLL_FEED_TOKEN_TIME_DIES_WITHIN = (60 * 1.5) -- 1.5 minutes
+local TROLL_FEED_TOKEN_DURATION = (60 * 5) -- 5 minutes
+
+
 require("common/init")
 require("util")
-
 WebApi.customGame = "Dota12v12"
 
 LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_troll_feed_token", 'anti_feed_system/modifier_troll_feed_token', LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_troll_debuff_stop_feed", 'anti_feed_system/modifier_troll_debuff_stop_feed', LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
+
+_G.lastDeathTimes = {}
+_G.tableRadiantHeroes = {}
+_G.tableDireHeroes = {}
+_G.tableFeedingStatistics = {}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -56,6 +74,8 @@ function CMegaDotaGameMode:InitGameMode()
 	ListenToGameEvent('game_rules_state_change', Dynamic_Wrap(CMegaDotaGameMode, 'OnGameRulesStateChange'), self)
 	ListenToGameEvent( "npc_spawned", Dynamic_Wrap( CMegaDotaGameMode, "OnNPCSpawned" ), self )
 	ListenToGameEvent( "entity_killed", Dynamic_Wrap( CMegaDotaGameMode, 'OnEntityKilled' ), self )
+	ListenToGameEvent("dota_player_pick_hero", Dynamic_Wrap(CMegaDotaGameMode, "OnHeroPicked"), self)
+
 
 	self.m_CurrentGoldScaleFactor = GOLD_SCALE_FACTOR_INITIAL
 	self.m_CurrentXpScaleFactor = XP_SCALE_FACTOR_INITIAL
@@ -153,6 +173,68 @@ function otherTeam(team)
     return -1
 end
 
+function UnitInSafeZone(unit)
+	local teamNumber = unit:GetTeamNumber()
+	local fountains = Entities:FindAllByClassname('ent_dota_fountain')
+	local allyFountainPosition
+	for i, focusFountain in pairs(fountains) do
+		if focusFountain:GetTeamNumber() == teamNumber then
+			allyFountainPosition = focusFountain:GetAbsOrigin()
+		end
+	end
+	if ((allyFountainPosition - unit:GetOrigin()):Length2D()) <= TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER then
+		return true
+	else
+		return false
+	end
+end
+
+function GetHeroKD(unit)
+	return (unit:GetKills() - unit:GetDeaths())
+end
+
+function ItWorstKD(unit) -- use minimun TROLL_FEED_RATIO_KD_TO_TRIGGER
+	local unitTeam = unit:GetTeamNumber()
+	local focusTableHeroes
+
+	if unitTeam == DOTA_TEAM_GOODGUYS then
+		focusTableHeroes = _G.tableRadiantHeroes
+	elseif unitTeam == DOTA_TEAM_BADGUYS then
+		focusTableHeroes = _G.tableDireHeroes
+	end
+
+	for i, focusHero in pairs(focusTableHeroes) do
+		local unitKD = GetHeroKD(unit)
+		if unitKD > TROLL_FEED_RATIO_KD_TO_TRIGGER then
+			return false
+		elseif (GetHeroKD(focusHero) <= unitKD) and (not(unit == focusHero))then
+			return false
+		end
+	end
+	return true
+end
+
+function CMegaDotaGameMode:OnHeroPicked(event)
+	local hero = EntIndexToHScript(event.heroindex)
+
+	if hero then
+		if hero:GetTeamNumber() == DOTA_TEAM_GOODGUYS then
+			table.insert(_G.tableRadiantHeroes, hero)
+			_G.tableRadiantHeroes[#tableRadiantHeroes].GetHeroName = function()
+				return tableRadiantHeroes[#tableRadiantHeroes].hero_name
+			end
+		end
+
+		if hero:GetTeamNumber() == DOTA_TEAM_BADGUYS then
+			table.insert(_G.tableDireHeroes, hero)
+			_G.tableRadiantHeroes[#tableDireHeroes].GetHeroName = function()
+				return tableDireHeroes[#tableDireHeroes].hero_name
+			end
+		end
+	end
+
+end
+
 ---------------------------------------------------------------------------
 -- Event: OnEntityKilled
 ---------------------------------------------------------------------------
@@ -212,7 +294,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	    local addedTime = 0
 	    if difference < 0 then
 	        addedTime = difference * 5
-	        local RespawnReductionRate = string.format("%.2f", tostring(respawnReduction))
+	        local RespawnReductionRate = NewRespawnTimestring.format("%.2f", tostring(respawnReduction))
 		    local OriginalRespawnTime = tostring(math.floor(timeLeft))
 		    local TimeToReduce = tostring(math.floor(addedTime))
 		    local NewRespawnTime = tostring(math.floor(timeLeft + addedTime))
@@ -229,10 +311,35 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	    killedUnit:SetTimeUntilRespawn(timeLeft)
     end
 
+	if _G.lastDeathTimes[killedUnit] and ((GameRules:GetGameTime() - _G.lastDeathTimes[killedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and (not UnitInSafeZone(killedUnit)) and ItWorstKD(killedUnit) then
+		_G.tableFeedingStatistics[killedUnit] = true
+	else
+		_G.tableFeedingStatistics[killedUnit] = false
+	end
+
+	if (not (killer == killedUnit)) and killedUnit:IsRealHero() then
+		_G.lastDeathTimes[killedUnit] = GameRules:GetGameTime()
+	end
+
 end
 
 function CMegaDotaGameMode:OnNPCSpawned( event )
 	local spawnedUnit = EntIndexToHScript( event.entindex )
+
+	if _G.tableFeedingStatistics[spawnedUnit] then
+		local tokenName = "modifier_troll_feed_token"
+		local currentStackToken = spawnedUnit:GetModifierStackCount(tokenName, spawnedUnit)
+
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, tokenName, { duration = TROLL_FEED_TOKEN_DURATION })
+
+		local needToken = currentStackToken + 1
+		spawnedUnit:SetModifierStackCount(tokenName, spawnedUnit, needToken)
+
+		if needToken >= TROLL_FEED_NEED_TOKEN_TO_BUFF then
+			local timeBuff = TROLL_FEED_BUFF_BASIC_TIME + ((needToken - TROLL_FEED_NEED_TOKEN_TO_BUFF) * TROLL_FEED_INCREASE_BUFF_AFTER_DEATH_PER_TOKEN)
+			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = timeBuff, addRespawnTime = TROLL_FEED_EXTRA_RESPAWN_TIME })
+		end
+	end
 
 	local owner = spawnedUnit:GetOwner()
 	local name = spawnedUnit:GetUnitName()
@@ -466,7 +573,7 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
         }
 
         local fountains = Entities:FindAllByClassname('ent_dota_fountain')
-        -- Loop over all ents
+		--        -- Loop over all ents
         for k,fountain in pairs(fountains) do
             for skillName,skillLevel in pairs(toAdd) do
                 fountain:AddAbility(skillName)
