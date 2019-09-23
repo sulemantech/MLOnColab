@@ -2,7 +2,7 @@ modifier_troll_feed_token_couter = class({})
 
 --------------------------------------------------------------------------------
 function modifier_troll_feed_token_couter:IsHidden()
-    return false
+    return true
 end
 
 --------------------------------------------------------------------------------

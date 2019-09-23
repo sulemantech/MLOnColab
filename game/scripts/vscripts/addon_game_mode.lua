@@ -16,7 +16,7 @@ local TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN = -5 -- (Kill-Death)
 local TROLL_FEED_NEED_TOKEN_TO_BUFF = 3
 local TROLL_FEED_TOKEN_TIME_DIES_WITHIN = (60 * 1.5) -- 1.5 minutes
 local TROLL_FEED_TOKEN_DURATION = (60 * 5) -- 5 minutes
-
+local TROLL_FEED_MIN_RESPAWN_TIME = 60 -- 1 minute
 
 require("common/init")
 require("util")
@@ -33,8 +33,7 @@ _G.newStats = newStats or {}
 _G.lastDeathTimes = {}
 _G.tableRadiantHeroes = {}
 _G.tableDireHeroes = {}
-_G.tableFeedingStatistics = {}
-_G.tableFeedersRespawnTime = {}
+_G.newRespawnTimes = {}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -245,7 +244,7 @@ function CMegaDotaGameMode:DamageFilter(event)
 	local killer = EntIndexToHScript(event.entindex_attacker_const)
 	local death_unit = EntIndexToHScript(event.entindex_victim_const)
 
-	if death_unit:IsRealHero() and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (PlayerResource:GetSelectedHeroEntity(death_unit:GetPlayerID())) and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
+	if death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
 		death_unit:Kill(nil, death_unit)
 	end
 
@@ -325,16 +324,12 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	        timeLeft = 1
 	    end
 
-	    killedUnit:SetTimeUntilRespawn(timeLeft)
+		if not killedUnit:HasModifier("modifier_troll_debuff_stop_feed") and not ItWorstKD(killedUnit) then
+			killedUnit:SetTimeUntilRespawn(timeLeft)
+		end
     end
 
-	if _G.lastDeathTimes[killedUnit] and ((GameRules:GetGameTime() - _G.lastDeathTimes[killedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and (not UnitInSafeZone(killedUnit)) and ItWorstKD(killedUnit) then
-		_G.tableFeedingStatistics[killedUnit] = true
-	else
-		_G.tableFeedingStatistics[killedUnit] = false
-	end
-
-	if (not (killer == killedUnit)) and killedUnit:IsRealHero() then
+	if (not (killer == killedUnit)) and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
 		_G.lastDeathTimes[killedUnit] = GameRules:GetGameTime()
 	end
 
@@ -342,24 +337,42 @@ end
 
 function CMegaDotaGameMode:OnNPCSpawned(event)
 	local spawnedUnit = EntIndexToHScript(event.entindex)
+	local tokenTrollCouter = "modifier_troll_feed_token_couter"
 
-	if _G.tableFeedingStatistics[spawnedUnit] then
-		local tokenCouter = "modifier_troll_feed_token_couter"
-		local currentStackTokenCouter = spawnedUnit:GetModifierStackCount(tokenCouter, spawnedUnit)
+	-- Assignment of tokens during quick death, maximum 3
+	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") then
+		local maxToken = TROLL_FEED_NEED_TOKEN_TO_BUFF
+		local currentStackTokenCouter = spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit)
 		local needToken = currentStackTokenCouter + 1
-
-		if needToken > TROLL_FEED_NEED_TOKEN_TO_BUFF  then
-			spawnedUnit:RemoveModifierByName(tokenCouter)
-			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = TROLL_FEED_BUFF_BASIC_TIME, addRespawnTime = spawnedUnit:GetRespawnTime() * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE })
-			_G.tableFeedersRespawnTime[spawnedUnit] = GameRules:GetGameTime()
-		elseif spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") then
-			local needTimeDebuffFeed = spawnedUnit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
-			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = needTimeDebuffFeed, addRespawnTime = spawnedUnit:GetRespawnTime() * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE })
-		elseif needToken <= TROLL_FEED_NEED_TOKEN_TO_BUFF then
-			spawnedUnit:AddNewModifier(spawnedUnit, nil, tokenCouter, { duration = TROLL_FEED_TOKEN_DURATION })
-			spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_feed_token", { duration = TROLL_FEED_TOKEN_DURATION })
-			spawnedUnit:SetModifierStackCount(tokenCouter, spawnedUnit, needToken)
+		if needToken > maxToken then
+			needToken = maxToken
 		end
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, tokenTrollCouter, { duration = TROLL_FEED_TOKEN_DURATION })
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_feed_token", { duration = TROLL_FEED_TOKEN_DURATION })
+		spawnedUnit:SetModifierStackCount(tokenTrollCouter, spawnedUnit, needToken)
+	end
+
+	-- If the debuff already exists, then we recreate it with a new time.
+	if spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and ItWorstKD(spawnedUnit) then
+		local normalRespawnTime =  spawnedUnit:GetRespawnTime()
+		local newTime = spawnedUnit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
+		spawnedUnit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
+		local addRespawnTime = normalRespawnTime * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE
+		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
+			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
+		end
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = newTime, addRespawnTime = addRespawnTime })
+	end
+
+	-- Issuing a debuff if 3 quick deaths have accumulated and the hero has the worst KD in the team
+	if spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit) == 3 and ItWorstKD(spawnedUnit) then
+		local normalRespawnTime = spawnedUnit:GetRespawnTime()
+		spawnedUnit:RemoveModifierByName(tokenTrollCouter)
+		local addRespawnTime = normalRespawnTime * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE
+		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
+			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
+		end
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = TROLL_FEED_BUFF_BASIC_TIME, addRespawnTime = addRespawnTime })
 	end
 
 	local owner = spawnedUnit:GetOwner()
