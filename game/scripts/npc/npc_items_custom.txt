@@ -1,26 +1,5 @@
 "DOTAAbilities"
 {
-    "item_blink"
-    {
-    "AbilitySpecial"
-            {
-                "01"
-                {
-                    "var_type"				"FIELD_INTEGER"
-                    "blink_range"			"99999999"
-                }
-                "02"
-                {
-                    "var_type"				"FIELD_FLOAT"
-                    "blink_damage_cooldown"	"0"
-                }
-                "03"
-                {
-                    "var_type"				"FIELD_INTEGER"
-                    "blink_range_clamp"		"99999999"
-                }
-            }
-    }
     "item_patreonbundle_1"
     {
         "BaseClass"	"item_datadriven"
