@@ -371,6 +371,7 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
 			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
 		end
+		GameRules:SendCustomMessage("#anti_feed_system_add_debuff_message", spawnedUnit:GetPlayerID(), 0)
 		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = TROLL_FEED_BUFF_BASIC_TIME, addRespawnTime = addRespawnTime })
 	end
 
