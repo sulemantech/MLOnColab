@@ -31,6 +31,7 @@ LinkLuaModifier("modifier_troll_debuff_stop_feed", 'anti_feed_system/modifier_tr
 _G.newStats = newStats or {}
 
 _G.lastDeathTimes = {}
+_G.lastHeroKillers = {}
 _G.tableRadiantHeroes = {}
 _G.tableDireHeroes = {}
 _G.newRespawnTimes = {}
@@ -340,10 +341,10 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 		end
     end
 
-	if (not (killer == killedUnit)) and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
+	if (killer ~= killedUnit) and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
 		_G.lastDeathTimes[killedUnit] = GameRules:GetGameTime()
 	end
-
+	_G.lastHeroKillers[killedUnit] = killer
 end
 
 function CMegaDotaGameMode:OnNPCSpawned(event)
@@ -351,7 +352,7 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 	local tokenTrollCouter = "modifier_troll_feed_token_couter"
 
 	-- Assignment of tokens during quick death, maximum 3
-	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") then
+	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and (_G.lastHeroKillers[spawnedUnit]~=spawnedUnit) then
 		local maxToken = TROLL_FEED_NEED_TOKEN_TO_BUFF
 		local currentStackTokenCouter = spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit)
 		local needToken = currentStackTokenCouter + 1
