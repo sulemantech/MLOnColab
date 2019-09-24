@@ -354,9 +354,9 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 
 	-- If the debuff already exists, then we recreate it with a new time.
 	if spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and ItWorstKD(spawnedUnit) then
-		local normalRespawnTime =  spawnedUnit:GetRespawnTime()
 		local newTime = spawnedUnit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
 		spawnedUnit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
+		local normalRespawnTime =  spawnedUnit:GetRespawnTime()
 		local addRespawnTime = normalRespawnTime * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE
 		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
 			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
@@ -366,8 +366,8 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 
 	-- Issuing a debuff if 3 quick deaths have accumulated and the hero has the worst KD in the team
 	if spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit) == 3 and ItWorstKD(spawnedUnit) then
-		local normalRespawnTime = spawnedUnit:GetRespawnTime()
 		spawnedUnit:RemoveModifierByName(tokenTrollCouter)
+		local normalRespawnTime = spawnedUnit:GetRespawnTime()
 		local addRespawnTime = normalRespawnTime * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE
 		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
 			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
