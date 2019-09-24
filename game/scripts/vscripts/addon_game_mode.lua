@@ -321,7 +321,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	    local addedTime = 0
 	    if difference < 0 then
 	        addedTime = difference * 5
-	        local RespawnReductionRate = NewRespawnTimestring.format("%.2f", tostring(respawnReduction))
+	        local RespawnReductionRate = string.format("%.2f", tostring(respawnReduction))
 		    local OriginalRespawnTime = tostring(math.floor(timeLeft))
 		    local TimeToReduce = tostring(math.floor(addedTime))
 		    local NewRespawnTime = tostring(math.floor(timeLeft + addedTime))
