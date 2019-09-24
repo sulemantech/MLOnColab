@@ -9,8 +9,8 @@ local XP_SCALE_FACTOR_FADEIN_SECONDS = (60 * 60) -- 60 minutes
 
 -- Anti feed system
 local TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER = 6000 -- Distance from allince Fountain
-local TROLL_FEED_BUFF_BASIC_TIME = (60 * 10)    -- 10 minutes
-local TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE = 2.5 -- 2.5 minutes
+local TROLL_FEED_BUFF_BASIC_TIME = (60 * 10)   -- 10 minutes
+local TROLL_FEED_TOTAL_RESPAWN_TIME_MULTIPLE = 2.5 -- x2.5 respawn time. If you respawn 100sec, after debuff you respawn 250sec
 local TROLL_FEED_INCREASE_BUFF_AFTER_DEATH = 60 -- 1 minute
 local TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN = -5 -- (Kill-Death)
 local TROLL_FEED_NEED_TOKEN_TO_BUFF = 3
@@ -245,6 +245,17 @@ function CMegaDotaGameMode:DamageFilter(event)
 	local death_unit = EntIndexToHScript(event.entindex_victim_const)
 
 	if death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
+		if ItWorstKD(death_unit) then
+			local newTime = death_unit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
+			--death_unit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
+			local normalRespawnTime =  death_unit:GetRespawnTime()
+			local addRespawnTime = normalRespawnTime * (TROLL_FEED_TOTAL_RESPAWN_TIME_MULTIPLE - 1)
+
+			if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
+				addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
+			end
+			death_unit:AddNewModifier(death_unit, nil, "modifier_troll_debuff_stop_feed", { duration = newTime, addRespawnTime = addRespawnTime })
+		end
 		death_unit:Kill(nil, death_unit)
 	end
 
@@ -352,23 +363,11 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 		spawnedUnit:SetModifierStackCount(tokenTrollCouter, spawnedUnit, needToken)
 	end
 
-	-- If the debuff already exists, then we recreate it with a new time.
-	if spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and ItWorstKD(spawnedUnit) then
-		local newTime = spawnedUnit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
-		spawnedUnit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
-		local normalRespawnTime =  spawnedUnit:GetRespawnTime()
-		local addRespawnTime = normalRespawnTime * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE
-		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
-			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
-		end
-		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = newTime, addRespawnTime = addRespawnTime })
-	end
-
 	-- Issuing a debuff if 3 quick deaths have accumulated and the hero has the worst KD in the team
 	if spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit) == 3 and ItWorstKD(spawnedUnit) then
 		spawnedUnit:RemoveModifierByName(tokenTrollCouter)
 		local normalRespawnTime = spawnedUnit:GetRespawnTime()
-		local addRespawnTime = normalRespawnTime * TROLL_FEED_EXTRA_RESPAWN_TIME_MULTIPLE
+		local addRespawnTime = normalRespawnTime * (TROLL_FEED_TOTAL_RESPAWN_TIME_MULTIPLE - 1)
 		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
 			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
 		end
