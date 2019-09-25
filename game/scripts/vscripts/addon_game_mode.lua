@@ -245,10 +245,15 @@ end
 -- Filter: DamageFilter
 ---------------------------------------------------------------------------
 function CMegaDotaGameMode:DamageFilter(event)
-	local killer = EntIndexToHScript(event.entindex_attacker_const)
-	local death_unit = EntIndexToHScript(event.entindex_victim_const)
-
-	if death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
+	local entindex_victim_const = event.entindex_victim_const
+    local entindex_attacker_const = event.entindex_attacker_const
+	local death_unit
+    local killer
+	
+	if (entindex_victim_const) then death_unit = EntIndexToHScript(entindex_victim_const) end
+    if (entindex_attacker_const) then killer = EntIndexToHScript(entindex_attacker_const) end
+	
+	if death_unit and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
 		if ItWorstKD(death_unit) and (not (UnitInSafeZone(death_unit, _G.lastHerosPlaceLastDeath[death_unit]))) then
 			local newTime = death_unit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
 			--death_unit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
