@@ -17,6 +17,8 @@ local TROLL_FEED_NEED_TOKEN_TO_BUFF = 3
 local TROLL_FEED_TOKEN_TIME_DIES_WITHIN = (60 * 1.5) -- 1.5 minutes
 local TROLL_FEED_TOKEN_DURATION = (60 * 5) -- 5 minutes
 local TROLL_FEED_MIN_RESPAWN_TIME = 60 -- 1 minute
+local TROLL_FEED_SYSTEM_ASSISTS_TO_KILL_MULTI = 0.5 -- 10 assists = 5 "kills"
+
 
 require("common/init")
 require("util")
@@ -32,6 +34,7 @@ _G.newStats = newStats or {}
 
 _G.lastDeathTimes = {}
 _G.lastHeroKillers = {}
+_G.lastHerosPlaceLastDeath = {}
 _G.tableRadiantHeroes = {}
 _G.tableDireHeroes = {}
 _G.newRespawnTimes = {}
@@ -177,7 +180,7 @@ function otherTeam(team)
     return -1
 end
 
-function UnitInSafeZone(unit)
+function UnitInSafeZone(unit , unitPosition)
 	local teamNumber = unit:GetTeamNumber()
 	local fountains = Entities:FindAllByClassname('ent_dota_fountain')
 	local allyFountainPosition
@@ -186,7 +189,7 @@ function UnitInSafeZone(unit)
 			allyFountainPosition = focusFountain:GetAbsOrigin()
 		end
 	end
-	if ((allyFountainPosition - unit:GetOrigin()):Length2D()) <= TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER then
+	if ((allyFountainPosition - unitPosition):Length2D()) <= TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER then
 		return true
 	else
 		return false
@@ -194,7 +197,7 @@ function UnitInSafeZone(unit)
 end
 
 function GetHeroKD(unit)
-	return (unit:GetKills() - unit:GetDeaths())
+	return (unit:GetKills() + (unit:GetAssists() * TROLL_FEED_SYSTEM_ASSISTS_TO_KILL_MULTI) - unit:GetDeaths())
 end
 
 function ItWorstKD(unit) -- use minimun TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN
@@ -246,7 +249,7 @@ function CMegaDotaGameMode:DamageFilter(event)
 	local death_unit = EntIndexToHScript(event.entindex_victim_const)
 
 	if death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
-		if ItWorstKD(death_unit) then
+		if ItWorstKD(death_unit) and UnitInSafeZone(death_unit, _G.lastHerosPlaceLastDeath[death_unit]) then
 			local newTime = death_unit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
 			--death_unit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
 			local normalRespawnTime =  death_unit:GetRespawnTime()
@@ -271,7 +274,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
     local killer = EntIndexToHScript( event.entindex_attacker )
 	local killedTeam = killedUnit:GetTeam()
 
-    --print("fired")
+	--print("fired")
     if killedUnit:IsRealHero() and not killedUnit:IsReincarnating() then
 		local player_id = -1
 		if killer and killer:IsRealHero() and killer.GetPlayerID then
@@ -341,10 +344,14 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 		end
     end
 
-	if (killer ~= killedUnit) and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
-		_G.lastDeathTimes[killedUnit] = GameRules:GetGameTime()
+	if and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
+		_G.lastHeroKillers[killedUnit] = killer
+		_G.lastHerosPlaceLastDeath[killedUnit] = killedUnit:GetOrigin()
+		if (killer ~= killedUnit) then
+			_G.lastDeathTimes[killedUnit] = GameRules:GetGameTime()
+		end
 	end
-	_G.lastHeroKillers[killedUnit] = killer
+
 end
 
 function CMegaDotaGameMode:OnNPCSpawned(event)
@@ -352,7 +359,7 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 	local tokenTrollCouter = "modifier_troll_feed_token_couter"
 
 	-- Assignment of tokens during quick death, maximum 3
-	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and (_G.lastHeroKillers[spawnedUnit]~=spawnedUnit) then
+	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and (_G.lastHeroKillers[spawnedUnit]~=spawnedUnit) and UnitInSafeZone(spawnedUnit, _G.lastHerosPlaceLastDeath[spawnedUnit]) then
 		local maxToken = TROLL_FEED_NEED_TOKEN_TO_BUFF
 		local currentStackTokenCouter = spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit)
 		local needToken = currentStackTokenCouter + 1
