@@ -344,7 +344,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 		end
     end
 
-	if and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
+	if killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
 		_G.lastHeroKillers[killedUnit] = killer
 		_G.lastHerosPlaceLastDeath[killedUnit] = killedUnit:GetOrigin()
 		if (killer ~= killedUnit) then
