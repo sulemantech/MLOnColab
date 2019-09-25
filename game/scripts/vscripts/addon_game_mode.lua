@@ -275,12 +275,16 @@ end
 -- Event: OnEntityKilled
 ---------------------------------------------------------------------------
 function CMegaDotaGameMode:OnEntityKilled( event )
-    local killedUnit = EntIndexToHScript( event.entindex_killed )
-    local killer = EntIndexToHScript( event.entindex_attacker )
-	local killedTeam = killedUnit:GetTeam()
-
+	local entindex_killed = event.entindex_killed
+    local entindex_attacker = event.entindex_attacker
+	local killedUnit
+    local killer
+	
+	if (entindex_killed) then killedUnit = EntIndexToHScript(entindex_killed) end
+    if (entindex_attacker) then killer = EntIndexToHScript(entindex_attacker) end
+	
 	--print("fired")
-    if killedUnit:IsRealHero() and not killedUnit:IsReincarnating() then
+    if killedUnit and killedUnit:IsRealHero() and not killedUnit:IsReincarnating() then
 		local player_id = -1
 		if killer and killer:IsRealHero() and killer.GetPlayerID then
 			player_id = killer:GetPlayerID()
@@ -344,12 +348,12 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	        timeLeft = 1
 	    end
 
-		if not killedUnit:HasModifier("modifier_troll_debuff_stop_feed") and not ItWorstKD(killedUnit) then
+		if killedUnit and (not killedUnit:HasModifier("modifier_troll_debuff_stop_feed")) and (not ItWorstKD(killedUnit)) then
 			killedUnit:SetTimeUntilRespawn(timeLeft)
 		end
     end
 
-	if killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
+	if killedUnit and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
 		_G.lastHeroKillers[killedUnit] = killer
 		_G.lastHerosPlaceLastDeath[killedUnit] = killedUnit:GetOrigin()
 		if (killer ~= killedUnit) then
