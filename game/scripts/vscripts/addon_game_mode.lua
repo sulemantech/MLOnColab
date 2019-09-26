@@ -246,14 +246,14 @@ end
 ---------------------------------------------------------------------------
 function CMegaDotaGameMode:DamageFilter(event)
 	local entindex_victim_const = event.entindex_victim_const
-    local entindex_attacker_const = event.entindex_attacker_const
+	local entindex_attacker_const = event.entindex_attacker_const
 	local death_unit
-    local killer
-	
+	local killer
+
 	if (entindex_victim_const) then death_unit = EntIndexToHScript(entindex_victim_const) end
-    if (entindex_attacker_const) then killer = EntIndexToHScript(entindex_attacker_const) end
-	
-	if death_unit and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (not (killer == death_unit)) then
+	if (entindex_attacker_const) then killer = EntIndexToHScript(entindex_attacker_const) end
+
+	if death_unit and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (killer ~= death_unit) and (killer:GetTeamNumber()~=DOTA_TEAM_NEUTRALS) then
 		if ItWorstKD(death_unit) and (not (UnitInSafeZone(death_unit, _G.lastHerosPlaceLastDeath[death_unit]))) then
 			local newTime = death_unit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
 			--death_unit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
@@ -368,7 +368,7 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 	local tokenTrollCouter = "modifier_troll_feed_token_couter"
 
 	-- Assignment of tokens during quick death, maximum 3
-	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and (_G.lastHeroKillers[spawnedUnit]~=spawnedUnit) and (not (UnitInSafeZone(spawnedUnit, _G.lastHerosPlaceLastDeath[spawnedUnit]))) then
+	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and (_G.lastHeroKillers[spawnedUnit]~=spawnedUnit) and (not (UnitInSafeZone(spawnedUnit, _G.lastHerosPlaceLastDeath[spawnedUnit]))) and (_G.lastHeroKillers[spawnedUnit]:GetTeamNumber()~=DOTA_TEAM_NEUTRALS) then
 		local maxToken = TROLL_FEED_NEED_TOKEN_TO_BUFF
 		local currentStackTokenCouter = spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit)
 		local needToken = currentStackTokenCouter + 1
