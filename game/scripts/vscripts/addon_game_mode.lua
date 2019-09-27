@@ -463,6 +463,7 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
         local toAdd = {
             luna_moon_glaive_fountain = 4,
             ursa_fury_swipes_fountain = 1,
+			fountain_death_aura = 1,
         }
 
         local fountains = Entities:FindAllByClassname('ent_dota_fountain')
