@@ -306,6 +306,24 @@ function CMegaDotaGameMode:OnThink()
 		self.m_CurrentXpScaleFactor = XP_SCALE_FACTOR_INITIAL + (xpFracTime * ( XP_SCALE_FACTOR_FINAL - XP_SCALE_FACTOR_INITIAL ) )
 --		print( "Gold scale = " .. self.m_CurrentGoldScaleFactor )
 --		print( "XP scale = " .. self.m_CurrentXpScaleFactor )
+
+		for i = 0, 23 do
+			if PlayerResource:IsValidPlayer( i ) then
+				local networth = 0
+				local hero = PlayerResource:GetSelectedHeroEntity( i )
+				if hero then
+					if hero:IsAlive() then
+						local pos = hero:GetAbsOrigin()
+						local sum = pos.x + pos.y
+						
+						if sum > 14150 or sum < -14350 or pos.x > 7750 or pos.x < -7750 or pos.y > 7500 or pos.y < -7300 then
+							hero:ForceKill(false)
+							-- Kill this unit immediately.
+						end
+					end
+				end
+			end
+		end
 	end
 	return 5
 end
@@ -462,8 +480,7 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
 	if newState == DOTA_GAMERULES_STATE_PRE_GAME then
         local toAdd = {
             luna_moon_glaive_fountain = 4,
-            ursa_fury_swipes_fountain = 1,
-			fountain_death_aura = 1,
+			ursa_fury_swipes_fountain = 1,
         }
 
         local fountains = Entities:FindAllByClassname('ent_dota_fountain')
