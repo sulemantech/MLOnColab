@@ -71,6 +71,18 @@ function CMegaDotaGameMode:InitGameMode()
 				duration = ability:GetSpecialValueFor("duration")
 			})
 		end
+		if event.abilityname == "item_blink" then
+			local oldpos = hero:GetAbsOrigin()
+			Timers:CreateTimer( 0.01, function()
+				local pos = hero:GetAbsOrigin()
+				local sum = pos.x + pos.y
+
+				if sum > 14150 or sum < -14350 or pos.x > 7750 or pos.x < -7750 or pos.y > 7500 or pos.y < -7300 then
+					FindClearSpaceForUnit(hero, oldpos, false)	
+					--CustomGameEventManager:Send_ServerToPlayer( PlayerResource:GetPlayer( event.PlayerID ), "display_custom_error", { message = "#" } )
+				end
+			end)
+		end
 	end, nil)
 
 	_G.kicks = {
