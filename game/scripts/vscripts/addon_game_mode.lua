@@ -79,7 +79,6 @@ function CMegaDotaGameMode:InitGameMode()
 
 				if sum > 14150 or sum < -14350 or pos.x > 7750 or pos.x < -7750 or pos.y > 7500 or pos.y < -7300 then
 					FindClearSpaceForUnit(hero, oldpos, false)	
-					--CustomGameEventManager:Send_ServerToPlayer( PlayerResource:GetPlayer( event.PlayerID ), "display_custom_error", { message = "#" } )
 				end
 			end)
 		end
@@ -321,7 +320,6 @@ function CMegaDotaGameMode:OnThink()
 
 		for i = 0, 23 do
 			if PlayerResource:IsValidPlayer( i ) then
-				local networth = 0
 				local hero = PlayerResource:GetSelectedHeroEntity( i )
 				if hero then
 					if hero:IsAlive() then
