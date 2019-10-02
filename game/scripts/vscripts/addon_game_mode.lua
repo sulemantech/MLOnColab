@@ -73,6 +73,9 @@ function CMegaDotaGameMode:InitGameMode()
 		end
 	end, nil)
 
+	_G.goodraxbonus = 0
+	_G.badraxbonus = 0
+
 	_G.kicks = {
 		false,
 		false,
@@ -160,6 +163,29 @@ function CMegaDotaGameMode:OnEntityKilled( event )
     local killedUnit = EntIndexToHScript( event.entindex_killed )
     local killer = EntIndexToHScript( event.entindex_attacker )
 	local killedTeam = killedUnit:GetTeam()
+	local name = killedUnit:GetUnitName()
+
+	local raxbonuses = {
+		npc_dota_goodguys_range_rax_top = 1,
+		npc_dota_goodguys_melee_rax_top = 2,
+		npc_dota_goodguys_range_rax_mid = 1,
+		npc_dota_goodguys_melee_rax_mid = 2,
+		npc_dota_goodguys_range_rax_bot = 1,
+		npc_dota_goodguys_melee_rax_bot = 2,
+		npc_dota_badguys_range_rax_top = -1,
+		npc_dota_badguys_melee_rax_top = -2,
+		npc_dota_badguys_range_rax_mid = -1,
+		npc_dota_badguys_melee_rax_mid = -2,
+		npc_dota_badguys_range_rax_bot = -1,
+		npc_dota_badguys_melee_rax_bot = -2,
+	}
+	if raxbonuses[name] ~= nil then
+		if raxbonuses[name] > 0 then
+			_G.badraxbonus = _G.badraxbonus + raxbonuses[name]
+		else
+			_G.goodraxbonus = _G.goodraxbonus - raxbonuses[name]
+		end
+	end
 
     --print("fired")
     if killedUnit:IsRealHero() and not killedUnit:IsReincarnating() then
@@ -172,7 +198,6 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 			end
 		end
 		if player_id ~= -1 then
-			local name = killedUnit:GetUnitName()
 
 			newStats[player_id] = newStats[player_id] or {
 				npc_dota_sentry_wards = 0,
@@ -231,6 +256,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 
 end
 
+LinkLuaModifier("modifier_rax_bonus", LUA_MODIFIER_MOTION_NONE)
 function CMegaDotaGameMode:OnNPCSpawned( event )
 	local spawnedUnit = EntIndexToHScript( event.entindex )
 
@@ -252,6 +278,7 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 
 	if spawnedUnit:IsRealHero() then
 		-- Silencer Nerf
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_rax_bonus", {})
 		Timers:CreateTimer(1, function()
 			if spawnedUnit:HasModifier("modifier_silencer_int_steal") then
 				spawnedUnit:RemoveModifierByName('modifier_silencer_int_steal')
