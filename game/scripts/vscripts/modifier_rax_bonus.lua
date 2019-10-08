@@ -11,11 +11,8 @@ end
 
 function modifier_rax_bonus:GetModifierConstantRespawnTime()
 	if self:GetParent():GetTeam() == DOTA_TEAM_GOODGUYS then
-		print(_G.goodraxbonus)
 		return -_G.goodraxbonus
 	else
-		print(_G.badraxbonus)
 		return -_G.badraxbonus
 	end
-	--return -100
 end
