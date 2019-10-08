@@ -189,11 +189,7 @@ function UnitInSafeZone(unit , unitPosition)
 			allyFountainPosition = focusFountain:GetAbsOrigin()
 		end
 	end
-	if ((allyFountainPosition - unitPosition):Length2D()) <= TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER then
-		return true
-	else
-		return false
-	end
+	return ((allyFountainPosition - unitPosition):Length2D()) <= TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER
 end
 
 function GetHeroKD(unit)
@@ -214,7 +210,7 @@ function ItWorstKD(unit) -- use minimun TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN
 		local unitKD = GetHeroKD(unit)
 		if unitKD > TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN then
 			return false
-		elseif (GetHeroKD(focusHero) <= unitKD) and (not(unit == focusHero))then
+		elseif GetHeroKD(focusHero) <= unitKD and unit ~= focusHero then
 			return false
 		end
 	end
@@ -223,20 +219,15 @@ end
 
 function CMegaDotaGameMode:OnHeroPicked(event)
 	local hero = EntIndexToHScript(event.heroindex)
+	if not hero then return end
 
 	if hero then
 		if hero:GetTeamNumber() == DOTA_TEAM_GOODGUYS then
 			table.insert(_G.tableRadiantHeroes, hero)
-			_G.tableRadiantHeroes[#tableRadiantHeroes].GetHeroName = function()
-				return tableRadiantHeroes[#tableRadiantHeroes].hero_name
-			end
 		end
 
 		if hero:GetTeamNumber() == DOTA_TEAM_BADGUYS then
 			table.insert(_G.tableDireHeroes, hero)
-			_G.tableDireHeroes[#tableDireHeroes].GetHeroName = function()
-				return tableDireHeroes[#tableDireHeroes].hero_name
-			end
 		end
 	end
 
@@ -624,7 +615,7 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
         }
 
         local fountains = Entities:FindAllByClassname('ent_dota_fountain')
-		--        -- Loop over all ents
+		-- Loop over all ents
         for k,fountain in pairs(fountains) do
             for skillName,skillLevel in pairs(toAdd) do
                 fountain:AddAbility(skillName)
