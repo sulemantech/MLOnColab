@@ -220,17 +220,14 @@ end
 function CMegaDotaGameMode:OnHeroPicked(event)
 	local hero = EntIndexToHScript(event.heroindex)
 	if not hero then return end
-
-	if hero then
-		if hero:GetTeamNumber() == DOTA_TEAM_GOODGUYS then
-			table.insert(_G.tableRadiantHeroes, hero)
-		end
-
-		if hero:GetTeamNumber() == DOTA_TEAM_BADGUYS then
-			table.insert(_G.tableDireHeroes, hero)
-		end
+	
+	if hero:GetTeamNumber() == DOTA_TEAM_GOODGUYS then
+		table.insert(_G.tableRadiantHeroes, hero)
 	end
 
+	if hero:GetTeamNumber() == DOTA_TEAM_BADGUYS then
+		table.insert(_G.tableDireHeroes, hero)
+	end
 end
 ---------------------------------------------------------------------------
 -- Filter: DamageFilter
