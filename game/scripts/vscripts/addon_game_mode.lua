@@ -15,6 +15,17 @@ LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
+_G.itemsBuy = {}
+_G.lastTimeBuyItemWithCooldown = {}
+
+_G.fastItemsWithCooldown = {
+	["item_disable_help_custom"] = 10,
+	["item_mute_custom"] = 10,
+}
+_G.fastItemsWithoutCooldown =
+{
+	--["item_banhammer"] = true, When teleporting, you can not change the size of the stack in the store.
+}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -515,6 +526,15 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
 	end
 end
 
+function DoesHeroHasFreeSlot(unit)
+	for i=0,15 do
+		if unit:GetItemInSlot(i) == nil then
+			return true
+		end
+	end
+	return false
+end
+
 function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 	if filterTable["item_entindex_const"] == nil then
 		return true
@@ -541,6 +561,58 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				"item_patreonbundle_1",
 				"item_patreonbundle_2"
 			}
+
+			if _G.fastItemsWithCooldown[itemName] then
+				local buyer = hItem:GetPurchaser()
+				local buyerEntIndex = buyer:GetEntityIndex()
+				local unique_key = itemName .. "_" .. buyerEntIndex
+				if ((_G.lastTimeBuyItemWithCooldown[unique_key] == nil) or ((GameRules:GetGameTime() - _G.lastTimeBuyItemWithCooldown[unique_key]) >= _G.fastItemsWithCooldown[itemName])) then
+					if not _G.itemsBuy[unique_key] then
+						_G.itemsBuy[unique_key] = true
+					else
+						_G.itemsBuy[unique_key] = not _G.itemsBuy[unique_key]
+					end
+
+					if DoesHeroHasFreeSlot(buyer) and _G.itemsBuy[unique_key] == true then
+						UTIL_Remove(hItem)
+						buyer:AddItemByName(itemName)
+						_G.lastTimeBuyItemWithCooldown[unique_key] = GameRules:GetGameTime()
+						return false
+					elseif not DoesHeroHasFreeSlot(buyer) then
+						UTIL_Remove(hItem)
+						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#dota_hud_error_cant_purchase_inventory_full" })
+						return false
+					end
+				else
+					UTIL_Remove(hItem)
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#fast_buy_items" })
+					return false
+				end
+			end
+
+			if _G.fastItemsWithoutCooldown[itemName] then
+				local buyer = hItem:GetPurchaser()
+				local buyerEntIndex = buyer:GetEntityIndex()
+				local unique_key = itemName .. "_" .. buyerEntIndex
+
+				if not _G.itemsBuy[unique_key] then
+					_G.itemsBuy[unique_key] = true
+				else
+					_G.itemsBuy[unique_key] = not _G.itemsBuy[unique_key]
+				end
+
+				if DoesHeroHasFreeSlot(buyer) and _G.itemsBuy[unique_key] == true then
+					UTIL_Remove(hItem)
+					buyer:AddItemByName(itemName)
+					_G.lastTimeBuyItemWithCooldown[unique_key] = GameRules:GetGameTime()
+					return false
+				elseif not DoesHeroHasFreeSlot(buyer) then
+					UTIL_Remove(hItem)
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#dota_hud_error_cant_purchase_inventory_full" })
+					return false
+				end
+			end
+
 			local pitem = false
 			for i=1,#pitems do
 				if itemName == pitems[i] then
