@@ -185,6 +185,15 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 		else
 			_G.goodraxbonus = _G.goodraxbonus - raxbonuses[name]
 		end
+		GameRules:SendCustomMessage("#destroyed_" .. string.sub(name,10,#name - 4),-1,0)
+		if _G.badraxbonus == 9 then
+			_G.badraxbonus = 11
+			GameRules:SendCustomMessage("#destroyed_goodguys_all_rax",-1,0)
+		end
+		if _G.goodraxbonus == 9 then
+			_G.goodraxbonus = 11
+			GameRules:SendCustomMessage("#destroyed_badguys_all_rax",-1,0)
+		end
 	end
 
     --print("fired")

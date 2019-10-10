@@ -10,9 +10,11 @@ function modifier_rax_bonus:DeclareFunctions()
 end
 
 function modifier_rax_bonus:GetModifierConstantRespawnTime()
-	if self:GetParent():GetTeam() == DOTA_TEAM_GOODGUYS then
-		return -_G.goodraxbonus
-	else
-		return -_G.badraxbonus
+	if IsServer() then
+		if self:GetParent():GetTeam() == DOTA_TEAM_GOODGUYS then
+			return -_G.goodraxbonus
+		else
+			return -_G.badraxbonus
+		end
 	end
 end
