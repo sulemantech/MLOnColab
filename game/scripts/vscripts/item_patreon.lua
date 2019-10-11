@@ -59,3 +59,30 @@ function OnSpellStartBanHammer( event )
         end
     end
 end
+
+function OnSpellStartSummonCourier( event )
+    local hero = event.caster
+
+    if not hero:IsRealHero() then return end
+
+    local player = event.caster
+    local pID = player:GetPlayerID()
+    local psets = Patreons:GetPlayerSettings(pID)
+    if psets.level > 1 then
+        if _G.personalCouriers[pID] == nil then
+            local cr = CreateUnitByName("npc_dota_courier", hero:GetAbsOrigin() + RandomVector(RandomFloat(100, 100)), true, nil, nil, 2)
+
+            Timers:CreateTimer(.1, function()
+                cr:SetControllableByPlayer(hero:GetPlayerID(), true)
+                _G.personalCouriers[pID] = cr;
+            end)
+            UTIL_Remove(event.ability);
+        else
+            CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(pID), "display_custom_error", { message = "#privatecourieralready" })
+            return
+        end
+    else
+        CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(pID), "display_custom_error", { message = "#nopatreonerror2" })
+        return
+    end
+end

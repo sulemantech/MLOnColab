@@ -6,6 +6,8 @@ local XP_SCALE_FACTOR_INITIAL = 2
 local XP_SCALE_FACTOR_FINAL = 2
 local XP_SCALE_FACTOR_FADEIN_SECONDS = (60 * 60) -- 60 minutes
 
+local game_start = true
+
 require("common/init")
 require("util")
 
@@ -15,6 +17,7 @@ LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
+_G.personalCouriers = {}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -483,15 +486,17 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
 
         end
 
-		local courier_spawn = {}
-		courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
-		courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
+		if game_start then
+			local courier_spawn = {}
+			courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
+			courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
 
-		for team = 2, 3 do
-			self.couriers[team] = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin(), true, nil, nil, team)
-			self.couriers[team]:AddNewModifier(self.couriers[team], nil, "modifier_core_courier", {})
+			for team = 2, 3 do
+				self.couriers[team] = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin(), true, nil, nil, team)
+				self.couriers[team]:AddNewModifier(self.couriers[team], nil, "modifier_core_courier", {})
+			end
+			game_start = false
 		end
-
 --		Timers:CreateTimer(30, function()
 --			for i=0,PlayerResource:GetPlayerCount() do
 --				local hero = PlayerResource:GetSelectedHeroEntity(i)
@@ -556,6 +561,20 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 					return false
 				end
 			end
+
+			if itemName == "item_patreon_courier" then
+				local psets = Patreons:GetPlayerSettings(plyID)
+				if psets.level < 2 then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#nopatreonerror2" })
+					UTIL_Remove(hItem)
+					return false
+				elseif _G.personalCouriers[plyID] then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "privatecourieralready" })
+					UTIL_Remove(hItem)
+					return false
+				end
+			end
+
 			if itemName == "item_banhammer" then
 				local psets = Patreons:GetPlayerSettings(plyID)
 				if psets.level < 2 then
@@ -574,7 +593,8 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 			local pitems = {
 				"item_patreonbundle_1",
 				"item_patreonbundle_2",
-				"item_banhammer"
+				"item_banhammer",
+				"item_patreon_courier"
 			}
 			for i=1,#pitems do
 				if itemName == pitems[i] then
@@ -590,6 +610,17 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 							if not psets then
 								UTIL_Remove(hItem)
 								return false
+							end
+							if itemName == "item_patreon_courier" then
+								if psets.level < 2 then
+									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#nopatreonerror2" })
+									UTIL_Remove(hItem)
+									return false
+								elseif _G.personalCouriers[prshID] then
+									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#privatecourieralready" })
+									UTIL_Remove(hItem)
+									return false
+								end
 							end
 							if itemName == "item_banhammer" then
 								if psets.level < 2 then
@@ -630,6 +661,21 @@ RegisterCustomEventListener("GetKicks", function(data)
     CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(data.id), "setkicks", {kicks = _G.kicks})
 end)
 
+function deepcopy(orig)
+	local orig_type = type(orig)
+	local copy
+	if orig_type == 'table' then
+		copy = {}
+		for orig_key, orig_value in next, orig, nil do
+			copy[deepcopy(orig_key)] = deepcopy(orig_value)
+		end
+		setmetatable(copy, deepcopy(getmetatable(orig)))
+	else
+		copy = orig
+	end
+	return copy
+end
+
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	-- DeepPrintTable({ order = filterTable })
 	local orderType = filterTable.order_type
@@ -648,6 +694,62 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	local disableHelpResult = DisableHelp.ExecuteOrderFilter(orderType, ability, target, unit)
 	if disableHelpResult == false then
 		return false
+	end
+
+	if _G.personalCouriers[playerId] then
+		for i, x in pairs(filterTable.units) do
+			unit = EntIndexToHScript(filterTable.units[tostring(i)])
+
+			if unit:IsCourier() and unit ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
+				local privateCourier = _G.personalCouriers[playerId]
+				local entities = { filterTable.units[i] }
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = entities })
+
+				local needRemoveUnitEnt = filterTable.units[tostring(i)]
+				local newtable = deepcopy(filterTable)
+
+				for i, x in pairs(newtable.units) do
+					if newtable.units[i] == needRemoveUnitEnt then
+						print("NEED REMOVE OR SWAP")
+						--newtable.units[i] = nil
+						newtable.units[i] = privateCourier:GetEntityIndex()
+					end
+				end
+
+				local abilityEntPersCour = -1
+				for i = 0, 20 do
+					if privateCourier:GetAbilityByIndex(i) and ability and privateCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
+						abilityEntPersCour = privateCourier:GetAbilityByIndex(i):GetEntityIndex()
+						if orderType == DOTA_UNIT_ORDER_CAST_NO_TARGET then
+							privateCourier:CastAbilityNoTarget(privateCourier:GetAbilityByIndex(i),playerId)
+						end
+					end
+				end
+
+				if orderType ~= DOTA_UNIT_ORDER_CAST_NO_TARGET then
+					for i, x in pairs(newtable.units) do
+						local newOrder = {
+							UnitIndex = newtable.units[i],
+							OrderType = newtable.order_type,
+							TargetIndex = newtable.entindex_target,
+							AbilityIndex = abilityEntPersCour,
+							Position = Vector(newtable.position_x, newtable.position_y, newtable.position_z),
+							Queue = newtable.queue
+						}
+						ExecuteOrderFromTable(newOrder)
+					end
+				end
+
+				entities = { privateCourier:GetEntityIndex() }
+
+				if filterTable.units["1"] == nil then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_new", { entities = entities })
+				else
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_add", { entities = entities })
+				end
+				return false
+			end
+		end
 	end
 
 	if orderType == DOTA_UNIT_ORDER_CAST_POSITION then
