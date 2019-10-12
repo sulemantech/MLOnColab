@@ -185,6 +185,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 		else
 			_G.goodraxbonus = _G.goodraxbonus - raxbonuses[name]
 		end
+		SendOverheadEventMessage( nil, OVERHEAD_ALERT_MANA_LOSS, killedUnit, math.abs(raxbonuses[name]), nil )
 		GameRules:SendCustomMessage("#destroyed_" .. string.sub(name,10,#name - 4),-1,0)
 		if _G.badraxbonus == 9 then
 			_G.badraxbonus = 11
