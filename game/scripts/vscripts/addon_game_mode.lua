@@ -661,23 +661,7 @@ RegisterCustomEventListener("GetKicks", function(data)
     CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(data.id), "setkicks", {kicks = _G.kicks})
 end)
 
-function deepcopy(orig)
-	local orig_type = type(orig)
-	local copy
-	if orig_type == 'table' then
-		copy = {}
-		for orig_key, orig_value in next, orig, nil do
-			copy[deepcopy(orig_key)] = deepcopy(orig_value)
-		end
-		setmetatable(copy, deepcopy(getmetatable(orig)))
-	else
-		copy = orig
-	end
-	return copy
-end
-
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
-	-- DeepPrintTable({ order = filterTable })
 	local orderType = filterTable.order_type
 	local playerId = filterTable.issuer_player_id_const
 	local target = filterTable.entindex_target ~= 0 and EntIndexToHScript(filterTable.entindex_target) or nil
@@ -702,52 +686,30 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 
 			if unit:IsCourier() and unit ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
 				local privateCourier = _G.personalCouriers[playerId]
-				local entities = { filterTable.units[i] }
-				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = entities })
-
+				local removeFocusEnt = { filterTable.units[i] }
 				local needRemoveUnitEnt = filterTable.units[tostring(i)]
-				local newtable = deepcopy(filterTable)
 
-				for i, x in pairs(newtable.units) do
-					if newtable.units[i] == needRemoveUnitEnt then
-						print("NEED REMOVE OR SWAP")
-						--newtable.units[i] = nil
-						newtable.units[i] = privateCourier:GetEntityIndex()
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = removeFocusEnt })
+
+				for i, x in pairs(filterTable.units) do
+					if filterTable.units[i] == needRemoveUnitEnt then
+						filterTable.units[i] = privateCourier:GetEntityIndex()
 					end
 				end
 
-				local abilityEntPersCour = -1
 				for i = 0, 20 do
-					if privateCourier:GetAbilityByIndex(i) and ability and privateCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
-						abilityEntPersCour = privateCourier:GetAbilityByIndex(i):GetEntityIndex()
-						if orderType == DOTA_UNIT_ORDER_CAST_NO_TARGET then
-							privateCourier:CastAbilityNoTarget(privateCourier:GetAbilityByIndex(i),playerId)
-						end
+					if filterTable.entindex_ability and privateCourier:GetAbilityByIndex(i) and ability and privateCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
+						filterTable.entindex_ability = privateCourier:GetAbilityByIndex(i):GetEntityIndex()
 					end
 				end
 
-				if orderType ~= DOTA_UNIT_ORDER_CAST_NO_TARGET then
-					for i, x in pairs(newtable.units) do
-						local newOrder = {
-							UnitIndex = newtable.units[i],
-							OrderType = newtable.order_type,
-							TargetIndex = newtable.entindex_target,
-							AbilityIndex = abilityEntPersCour,
-							Position = Vector(newtable.position_x, newtable.position_y, newtable.position_z),
-							Queue = newtable.queue
-						}
-						ExecuteOrderFromTable(newOrder)
-					end
-				end
-
-				entities = { privateCourier:GetEntityIndex() }
+				local newFocus = { privateCourier:GetEntityIndex() }
 
 				if filterTable.units["1"] == nil then
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_new", { entities = entities })
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_new", { entities = newFocus })
 				else
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_add", { entities = entities })
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_add", { entities = newFocus })
 				end
-				return false
 			end
 		end
 	end
