@@ -29,7 +29,7 @@ local colorNames = {
 
 function Patreons:GetPlayerSettings(playerId)
 	-- TODO: Handle defaults more consistently
-	return Patreons.playerSettings[playerId] or { level = 0 }
+	return Patreons.playerSettings[playerId] or { level = 2 }
 end
 
 function Patreons:GetPlayerEmblemColor(playerId)

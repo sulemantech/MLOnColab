@@ -255,6 +255,7 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 
 	if spawnedUnit:IsRealHero() then
 		-- Silencer Nerf
+		local playerId = spawnedUnit:GetPlayerID()
 		Timers:CreateTimer(1, function()
 			if spawnedUnit:HasModifier("modifier_silencer_int_steal") then
 				spawnedUnit:RemoveModifierByName('modifier_silencer_int_steal')
@@ -269,11 +270,27 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 		if not spawnedUnit.firstTimeSpawned then
 			spawnedUnit.firstTimeSpawned = true
 			spawnedUnit:SetContextThink("HeroFirstSpawn", function()
-				local playerId = spawnedUnit:GetPlayerID()
+
 				if spawnedUnit == PlayerResource:GetSelectedHeroEntity(playerId) then
 					Patreons:GiveOnSpawnBonus(playerId)
 				end
 			end, 2/30)
+		end
+
+		local psets = Patreons:GetPlayerSettings(playerId)
+
+		if psets.level > 1 and _G.personalCouriers[playerId] == nil then
+			local courier_spawn = {
+				[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant"),
+				[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire"),
+			}
+			local team = spawnedUnit:GetTeamNumber()
+			local cr = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin() + RandomVector(RandomFloat(100, 100)), true, nil, nil, team)
+
+			Timers:CreateTimer(.1, function()
+				cr:SetControllableByPlayer(spawnedUnit:GetPlayerID(), true)
+				_G.personalCouriers[playerId] = cr;
+			end)
 		end
 	end
 end
@@ -562,19 +579,6 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				end
 			end
 
-			if itemName == "item_patreon_courier" then
-				local psets = Patreons:GetPlayerSettings(plyID)
-				if psets.level < 2 then
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#nopatreonerror2" })
-					UTIL_Remove(hItem)
-					return false
-				elseif _G.personalCouriers[plyID] then
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "privatecourieralready" })
-					UTIL_Remove(hItem)
-					return false
-				end
-			end
-
 			if itemName == "item_banhammer" then
 				local psets = Patreons:GetPlayerSettings(plyID)
 				if psets.level < 2 then
@@ -594,7 +598,6 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				"item_patreonbundle_1",
 				"item_patreonbundle_2",
 				"item_banhammer",
-				"item_patreon_courier"
 			}
 			for i=1,#pitems do
 				if itemName == pitems[i] then
@@ -610,17 +613,6 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 							if not psets then
 								UTIL_Remove(hItem)
 								return false
-							end
-							if itemName == "item_patreon_courier" then
-								if psets.level < 2 then
-									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#nopatreonerror2" })
-									UTIL_Remove(hItem)
-									return false
-								elseif _G.personalCouriers[prshID] then
-									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#privatecourieralready" })
-									UTIL_Remove(hItem)
-									return false
-								end
 							end
 							if itemName == "item_banhammer" then
 								if psets.level < 2 then
