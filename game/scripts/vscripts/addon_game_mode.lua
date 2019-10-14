@@ -18,6 +18,7 @@ LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
 _G.personalCouriers = {}
+_G.selectionUnits = {}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -59,6 +60,7 @@ function CMegaDotaGameMode:InitGameMode()
 	ListenToGameEvent('game_rules_state_change', Dynamic_Wrap(CMegaDotaGameMode, 'OnGameRulesStateChange'), self)
 	ListenToGameEvent( "npc_spawned", Dynamic_Wrap( CMegaDotaGameMode, "OnNPCSpawned" ), self )
 	ListenToGameEvent( "entity_killed", Dynamic_Wrap( CMegaDotaGameMode, 'OnEntityKilled' ), self )
+
 
 	self.m_CurrentGoldScaleFactor = GOLD_SCALE_FACTOR_INITIAL
 	self.m_CurrentXpScaleFactor = XP_SCALE_FACTOR_INITIAL
@@ -653,6 +655,7 @@ RegisterCustomEventListener("GetKicks", function(data)
     CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(data.id), "setkicks", {kicks = _G.kicks})
 end)
 
+
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	local orderType = filterTable.order_type
 	local playerId = filterTable.issuer_player_id_const
@@ -671,7 +674,7 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	if disableHelpResult == false then
 		return false
 	end
-
+	CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_refresh", { pID = playerId })
 	if _G.personalCouriers[playerId] then
 		for i, x in pairs(filterTable.units) do
 			unit = EntIndexToHScript(filterTable.units[tostring(i)])
@@ -680,9 +683,7 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 				local privateCourier = _G.personalCouriers[playerId]
 				local removeFocusEnt = { filterTable.units[i] }
 				local needRemoveUnitEnt = filterTable.units[tostring(i)]
-
 				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = removeFocusEnt })
-
 				for i, x in pairs(filterTable.units) do
 					if filterTable.units[i] == needRemoveUnitEnt then
 						filterTable.units[i] = privateCourier:GetEntityIndex()
@@ -696,12 +697,24 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 				end
 
 				local newFocus = { privateCourier:GetEntityIndex() }
+				local haveCourierFocus = false
+				local selectionCounter = 0
 
-				if filterTable.units["1"] == nil then
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_new", { entities = newFocus })
-				else
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_add", { entities = newFocus })
-				end
+				Timers:CreateTimer(0.04, function()
+					if _G.selectionUnits[playerId] then
+						for i, x in pairs(_G.selectionUnits[playerId]) do
+							selectionCounter = selectionCounter + 1
+							if EntIndexToHScript(x):IsCourier() then
+								haveCourierFocus = true
+							end
+						end
+					end
+					if haveCourierFocus and selectionCounter < 2 then
+						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_new", { entities = newFocus })
+					elseif haveCourierFocus then
+						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_add", { entities = newFocus })
+					end
+				end)
 			end
 		end
 	end
@@ -742,6 +755,10 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 
 	return true
 end
+
+RegisterCustomEventListener("selection_update", function(data)
+	_G.selectionUnits[data.PlayerID] = data.entities
+end)
 
 msgtimer = {}
 RegisterCustomEventListener("OnTimerClick", function(keys)
