@@ -292,6 +292,8 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 			cr:AddNewModifier(cr, nil, "modifier_core_courier", {})
 			Timers:CreateTimer(.1, function()
 				cr:SetControllableByPlayer(spawnedUnit:GetPlayerID(), true)
+				cr:SetModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
+				cr:SetOriginalModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
 				_G.personalCouriers[playerId] = cr;
 			end)
 		end
@@ -689,6 +691,8 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 			unit = EntIndexToHScript(filterTable.units[tostring(i)])
 			if unit:IsCourier() and unit ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
 				local privateCourier = _G.personalCouriers[playerId]
+				privateCourier:SetModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
+				privateCourier:SetOriginalModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
 				local removeFocusEnt = { filterTable.units[i] }
 				local needRemoveUnitEnt = filterTable.units[tostring(i)]
 				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = removeFocusEnt })
@@ -801,26 +805,27 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 
 	if not currentCourier then return end
 	if currentCourier:IsStunned() then return end
+	Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "give_item")
 
 	local stashHasItems = false
 
 	for i = 9,14 do
 		local item = player:GetAssignedHero():GetItemInSlot(i)
 		if item ~= nil then
-			print(i, ") stashHasItems, ", item, ": ",item:GetAbilityName())
 			stashHasItems = true
 		end
 	end
 
-	local timeToDeliver = 0.034
+	local courierHasItems = false
+
+	local timeToDeliver = 0.04
 	local courier_spawn = {}
 	courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
 	courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
 
-	Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "give_item")
-	Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item")
-
 	if stashHasItems then
+		courierHasItems = true
+		Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item")
 		local pointFountin = courier_spawn[team]:GetAbsOrigin()
 		local position = currentCourier:GetAbsOrigin()
 		local speed = 800
@@ -828,7 +833,7 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 			speed = 1600
 		end
 		local timeToFountain = (position - pointFountin):Length2D() / speed + 0.1
-		timeToDeliver = 0.08 + timeToFountain
+		timeToDeliver = 0.04 + timeToFountain
 
 		local newOrder = {
 			UnitIndex = currentCourier:entindex(),
@@ -836,25 +841,37 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 			Position = pointFountin
 		}
 		ExecuteOrderFromTable(newOrder)
-
 		Timers:CreateTimer(tostring(currentCourier:GetEntityIndex()) .. "give_item", {
 			useGameTime = true,
 			endTime = timeToDeliver,
 			callback = function()
 				if currentCourier:IsAlive() then
-					print(1)
 					currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(3), pID)
 				end
 			end
 		})
 	end
 
+	if not courierHasItems then
+		for i = 0, 20 do
+			local item = currentCourier:GetItemInSlot(i)
+			if item ~= nil then
+				courierHasItems = true
+			end
+		end
+	end
+	if not courierHasItems then return end
+	local newOrder = {
+		UnitIndex = currentCourier:entindex(),
+		OrderType = DOTA_UNIT_ORDER_MOVE_TO_POSITION,
+		Position = player:GetAssignedHero():GetAbsOrigin()
+	}
+	ExecuteOrderFromTable(newOrder)
 	Timers:CreateTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item", {
 		useGameTime = true,
 		endTime = timeToDeliver + 0.04,
 		callback = function()
 			if currentCourier:IsAlive() then
-				print(2)
 				currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(4), pID)
 			end
 		end
