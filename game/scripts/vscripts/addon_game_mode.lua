@@ -675,12 +675,8 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 		return false
 	end
 
-	for i,x in pairs(filterTable) do print(i,x) end
-
-
 	CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_refresh", { pID = playerId })
 	if _G.personalCouriers[playerId] then
-
 		if orderType == DOTA_UNIT_ORDER_GIVE_ITEM and target:IsCourier() and target ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
 			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#cannotgiveiteminthiscourier" })
 			return false
