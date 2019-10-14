@@ -288,7 +288,7 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 			}
 			local team = spawnedUnit:GetTeamNumber()
 			local cr = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin() + RandomVector(RandomFloat(100, 100)), true, nil, nil, team)
-
+			cr:AddNewModifier(cr, nil, "modifier_core_courier", {})
 			Timers:CreateTimer(.1, function()
 				cr:SetControllableByPlayer(spawnedUnit:GetPlayerID(), true)
 				_G.personalCouriers[playerId] = cr;
@@ -674,11 +674,20 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	if disableHelpResult == false then
 		return false
 	end
+
+	for i,x in pairs(filterTable) do print(i,x) end
+
+
 	CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_refresh", { pID = playerId })
 	if _G.personalCouriers[playerId] then
+
+		if orderType == DOTA_UNIT_ORDER_GIVE_ITEM and target:IsCourier() and target ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
+			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#cannotgiveiteminthiscourier" })
+			return false
+		end
+
 		for i, x in pairs(filterTable.units) do
 			unit = EntIndexToHScript(filterTable.units[tostring(i)])
-
 			if unit:IsCourier() and unit ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
 				local privateCourier = _G.personalCouriers[playerId]
 				local removeFocusEnt = { filterTable.units[i] }
@@ -700,7 +709,7 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 				local haveCourierFocus = false
 				local selectionCounter = 0
 
-				Timers:CreateTimer(0.04, function()
+				Timers:CreateTimer(0.034, function()
 					if _G.selectionUnits[playerId] then
 						for i, x in pairs(_G.selectionUnits[playerId]) do
 							selectionCounter = selectionCounter + 1
