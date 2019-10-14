@@ -19,6 +19,7 @@ LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
 _G.newStats = newStats or {}
 _G.personalCouriers = {}
 _G.selectionUnits = {}
+_G.mainTeamCouriers = {}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -512,6 +513,9 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
 
 			for team = 2, 3 do
 				self.couriers[team] = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin(), true, nil, nil, team)
+				if _G.mainTeamCouriers[team] == nil then
+					_G.mainTeamCouriers[team] = self.couriers[team]
+				end
 				self.couriers[team]:AddNewModifier(self.couriers[team], nil, "modifier_core_courier", {})
 			end
 			game_start = false
@@ -674,7 +678,6 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	if disableHelpResult == false then
 		return false
 	end
-
 	CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_refresh", { pID = playerId })
 	if _G.personalCouriers[playerId] then
 		if orderType == DOTA_UNIT_ORDER_GIVE_ITEM and target:IsCourier() and target ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
@@ -763,6 +766,99 @@ end
 
 RegisterCustomEventListener("selection_update", function(data)
 	_G.selectionUnits[data.PlayerID] = data.entities
+end)
+
+
+RegisterCustomEventListener("courier_custom_select", function(data)
+	local pID = data.playerId
+	if not pID then return end
+	local player = PlayerResource:GetPlayer(pID)
+	local team = player:GetTeamNumber()
+	local currentCourier = false
+
+	if _G.personalCouriers[pID] and _G.personalCouriers[pID]:IsAlive() then
+		currentCourier = { _G.personalCouriers[pID]:GetEntityIndex() }
+	elseif _G.mainTeamCouriers[team]:IsAlive() then
+		currentCourier = { _G.mainTeamCouriers[team]:GetEntityIndex() }
+	end
+
+	if not currentCourier then return end
+	CustomGameEventManager:Send_ServerToPlayer(player, "selection_new", { entities = currentCourier })
+end)
+
+RegisterCustomEventListener("courier_custom_select_deliever_items", function(data)
+	local pID = data.playerId
+	if not pID then return end
+	local player = PlayerResource:GetPlayer(pID)
+	local team = player:GetTeamNumber()
+	local currentCourier = false
+
+	if _G.personalCouriers[pID] and _G.personalCouriers[pID]:IsAlive() then
+		currentCourier = _G.personalCouriers[pID]
+	elseif _G.mainTeamCouriers[team]:IsAlive() then
+		currentCourier = _G.mainTeamCouriers[team]
+	end
+
+	if not currentCourier then return end
+	if currentCourier:IsStunned() then return end
+
+	local stashHasItems = false
+
+	for i = 9,14 do
+		local item = player:GetAssignedHero():GetItemInSlot(i)
+		if item ~= nil then
+			print(i, ") stashHasItems, ", item, ": ",item:GetAbilityName())
+			stashHasItems = true
+		end
+	end
+
+	local timeToDeliver = 0.034
+	local courier_spawn = {}
+	courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
+	courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
+
+	Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "give_item")
+	Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item")
+
+	if stashHasItems then
+		local pointFountin = courier_spawn[team]:GetAbsOrigin()
+		local position = currentCourier:GetAbsOrigin()
+		local speed = 800
+		if currentCourier:HasFlyMovementCapability() then
+			speed = 1600
+		end
+		local timeToFountain = (position - pointFountin):Length2D() / speed + 0.1
+		timeToDeliver = 0.08 + timeToFountain
+
+		local newOrder = {
+			UnitIndex = currentCourier:entindex(),
+			OrderType = DOTA_UNIT_ORDER_MOVE_TO_POSITION,
+			Position = pointFountin
+		}
+		ExecuteOrderFromTable(newOrder)
+
+		Timers:CreateTimer(tostring(currentCourier:GetEntityIndex()) .. "give_item", {
+			useGameTime = true,
+			endTime = timeToDeliver,
+			callback = function()
+				if currentCourier:IsAlive() then
+					print(1)
+					currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(3), pID)
+				end
+			end
+		})
+	end
+
+	Timers:CreateTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item", {
+		useGameTime = true,
+		endTime = timeToDeliver + 0.04,
+		callback = function()
+			if currentCourier:IsAlive() then
+				print(2)
+				currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(4), pID)
+			end
+		end
+	})
 end)
 
 msgtimer = {}
