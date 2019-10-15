@@ -14,6 +14,7 @@ require("util")
 WebApi.customGame = "Dota12v12"
 
 LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_patreon_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
@@ -289,11 +290,9 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 			}
 			local team = spawnedUnit:GetTeamNumber()
 			local cr = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin() + RandomVector(RandomFloat(100, 100)), true, nil, nil, team)
-			cr:AddNewModifier(cr, nil, "modifier_core_courier", {})
+			cr:AddNewModifier(cr, nil, "modifier_patreon_courier", {})
 			Timers:CreateTimer(.1, function()
 				cr:SetControllableByPlayer(spawnedUnit:GetPlayerID(), true)
-				cr:SetModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
-				cr:SetOriginalModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
 				_G.personalCouriers[playerId] = cr;
 			end)
 		end
@@ -682,7 +681,9 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	end
 	CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_refresh", { pID = playerId })
 	if _G.personalCouriers[playerId] then
-		if orderType == DOTA_UNIT_ORDER_GIVE_ITEM and target:IsCourier() and target ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
+		local privateCourier = _G.personalCouriers[playerId]
+
+		if orderType == DOTA_UNIT_ORDER_GIVE_ITEM and target:IsCourier() and target ~= privateCourier and privateCourier:IsAlive() then
 			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#cannotgiveiteminthiscourier" })
 			return false
 		end
@@ -690,9 +691,7 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 		for i, x in pairs(filterTable.units) do
 			unit = EntIndexToHScript(filterTable.units[tostring(i)])
 			if unit:IsCourier() and unit ~= _G.personalCouriers[playerId] and _G.personalCouriers[playerId]:IsAlive() then
-				local privateCourier = _G.personalCouriers[playerId]
-				privateCourier:SetModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
-				privateCourier:SetOriginalModel("models/items/juggernaut/ward/fortunes_tout/fortunes_tout.vmdl")
+
 				local removeFocusEnt = { filterTable.units[i] }
 				local needRemoveUnitEnt = filterTable.units[tostring(i)]
 				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = removeFocusEnt })
@@ -790,6 +789,14 @@ RegisterCustomEventListener("courier_custom_select", function(data)
 	CustomGameEventManager:Send_ServerToPlayer(player, "selection_new", { entities = currentCourier })
 end)
 
+function unitMoveToPoint(unit, point)
+	ExecuteOrderFromTable({
+		UnitIndex = unit:entindex(),
+		OrderType = DOTA_UNIT_ORDER_MOVE_TO_POSITION,
+		Position = point
+	})
+end
+
 RegisterCustomEventListener("courier_custom_select_deliever_items", function(data)
 	local pID = data.playerId
 	if not pID then return end
@@ -806,26 +813,24 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 	if not currentCourier then return end
 	if currentCourier:IsStunned() then return end
 	Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "give_item")
+	Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item")
 
 	local stashHasItems = false
 
-	for i = 9,14 do
+	for i = 9, 14 do
 		local item = player:GetAssignedHero():GetItemInSlot(i)
 		if item ~= nil then
 			stashHasItems = true
 		end
 	end
 
-	local courierHasItems = false
-
 	local timeToDeliver = 0.04
-	local courier_spawn = {}
-	courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
-	courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
+	local courier_spawn = {
+		[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant"),
+		[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire"),
+	}
 
 	if stashHasItems then
-		courierHasItems = true
-		Timers:RemoveTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item")
 		local pointFountin = courier_spawn[team]:GetAbsOrigin()
 		local position = currentCourier:GetAbsOrigin()
 		local speed = 800
@@ -833,45 +838,27 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 			speed = 1600
 		end
 		local timeToFountain = (position - pointFountin):Length2D() / speed + 0.1
-		timeToDeliver = 0.04 + timeToFountain
+		timeToDeliver = timeToDeliver + timeToFountain
 
-		local newOrder = {
-			UnitIndex = currentCourier:entindex(),
-			OrderType = DOTA_UNIT_ORDER_MOVE_TO_POSITION,
-			Position = pointFountin
-		}
-		ExecuteOrderFromTable(newOrder)
+		unitMoveToPoint(currentCourier, pointFountin)
+
 		Timers:CreateTimer(tostring(currentCourier:GetEntityIndex()) .. "give_item", {
 			useGameTime = true,
 			endTime = timeToDeliver,
 			callback = function()
-				if currentCourier:IsAlive() then
+				if currentCourier:IsAlive() and not currentCourier:IsStunned() then
 					currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(3), pID)
 				end
 			end
 		})
 	end
 
-	if not courierHasItems then
-		for i = 0, 20 do
-			local item = currentCourier:GetItemInSlot(i)
-			if item ~= nil then
-				courierHasItems = true
-			end
-		end
-	end
-	if not courierHasItems then return end
-	local newOrder = {
-		UnitIndex = currentCourier:entindex(),
-		OrderType = DOTA_UNIT_ORDER_MOVE_TO_POSITION,
-		Position = player:GetAssignedHero():GetAbsOrigin()
-	}
-	ExecuteOrderFromTable(newOrder)
 	Timers:CreateTimer(tostring(currentCourier:GetEntityIndex()) .. "deliever_item", {
 		useGameTime = true,
 		endTime = timeToDeliver + 0.04,
 		callback = function()
-			if currentCourier:IsAlive() then
+			if currentCourier:IsAlive() and not currentCourier:IsStunned() then
+				unitMoveToPoint(currentCourier, player:GetAssignedHero():GetAbsOrigin())
 				currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(4), pID)
 			end
 		end
