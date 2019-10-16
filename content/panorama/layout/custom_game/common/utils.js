@@ -91,9 +91,9 @@ function GetDotaHud ()
     var deliverItemsButton = FindDotaHudElement('DeliverItemsButton')
 
     selectCourietButton.SetPanelEvent("onactivate", function () {
-        GameEvents.SendCustomGameEventToServer("courier_custom_select", {playerId: playerId})
+        GameEvents.SendCustomGameEventToServer("courier_custom_select", {})
     })
     deliverItemsButton.SetPanelEvent("onactivate", function () {
-        GameEvents.SendCustomGameEventToServer("courier_custom_select_deliever_items", {playerId: playerId})
+        GameEvents.SendCustomGameEventToServer("courier_custom_select_deliever_items", {})
     })
 })();
