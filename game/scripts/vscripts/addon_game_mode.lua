@@ -73,8 +73,9 @@ function CMegaDotaGameMode:InitGameMode()
 		end
 	end, nil)
 
-	_G.goodraxbonus = 0
-	_G.badraxbonus = 0
+	_G.raxBonuses = {}
+	_G.raxBonuses[DOTA_TEAM_GOODGUYS] = 0
+	_G.raxBonuses[DOTA_TEAM_BADGUYS] = 0
 
 	_G.kicks = {
 		false,
@@ -165,7 +166,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	local killedTeam = killedUnit:GetTeam()
 	local name = killedUnit:GetUnitName()
 
-	local raxbonuses = {
+	local raxRespawnTimeWorth = {
 		npc_dota_goodguys_range_rax_top = 1,
 		npc_dota_goodguys_melee_rax_top = 2,
 		npc_dota_goodguys_range_rax_mid = 1,
@@ -179,21 +180,22 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 		npc_dota_badguys_range_rax_bot = -1,
 		npc_dota_badguys_melee_rax_bot = -2,
 	}
-	if raxbonuses[name] ~= nil then
-		if raxbonuses[name] > 0 then
-			_G.badraxbonus = _G.badraxbonus + raxbonuses[name]
+	if raxRespawnTimeWorth[name] ~= nil then
+		local opposingTeam = killedUnit:GetOpposingTeamNumber()
+		if raxRespawnTimeWorth[name] > 0 then
+			raxBonuses[opposingTeam] = raxBonuses[opposingTeam] + raxRespawnTimeWorth[name]
 		else
-			_G.goodraxbonus = _G.goodraxbonus - raxbonuses[name]
+			raxBonuses[opposingTeam] = raxBonuses[opposingTeam] - raxRespawnTimeWorth[name]
 		end
-		SendOverheadEventMessage( nil, OVERHEAD_ALERT_MANA_LOSS, killedUnit, math.abs(raxbonuses[name]), nil )
+		SendOverheadEventMessage( nil, OVERHEAD_ALERT_MANA_LOSS, killedUnit, math.abs(raxRespawnTimeWorth[name]), nil )
 		GameRules:SendCustomMessage("#destroyed_" .. string.sub(name,10,#name - 4),-1,0)
-		if _G.badraxbonus == 9 then
-			_G.badraxbonus = 11
-			GameRules:SendCustomMessage("#destroyed_goodguys_all_rax",-1,0)
-		end
-		if _G.goodraxbonus == 9 then
-			_G.goodraxbonus = 11
-			GameRules:SendCustomMessage("#destroyed_badguys_all_rax",-1,0)
+		if raxBonuses[opposingTeam] == 9 then
+			raxBonuses[opposingTeam] = 11
+			if opposingTeam == DOTA_TEAM_GOODGUYS then
+				GameRules:SendCustomMessage("#destroyed_badguys_all_rax",-1,0)
+			else
+				GameRules:SendCustomMessage("#destroyed_goodguys_all_rax",-1,0)
+			end
 		end
 	end
 
