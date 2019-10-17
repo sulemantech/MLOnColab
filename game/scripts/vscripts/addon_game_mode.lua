@@ -75,9 +75,8 @@ function CMegaDotaGameMode:InitGameMode()
 			local oldpos = hero:GetAbsOrigin()
 			Timers:CreateTimer( 0.01, function()
 				local pos = hero:GetAbsOrigin()
-				local sum = pos.x + pos.y
 
-				if sum > 14150 or sum < -14350 or pos.x > 7750 or pos.x < -7750 or pos.y > 7500 or pos.y < -7300 then
+				if IsInBugZone(pos) then
 					FindClearSpaceForUnit(hero, oldpos, false)	
 				end
 			end)
@@ -131,6 +130,11 @@ function CMegaDotaGameMode:InitGameMode()
 
 		return 0.6
 	end )
+end
+
+function IsInBugZone(pos)
+	local sum = pos.x + pos.y
+	return sum > 14150 or sum < -14350 or pos.x > 7750 or pos.x < -7750 or pos.y > 7500 or pos.y < -7300
 end
 
 function GetActivePlayerCountForTeam(team)
@@ -321,15 +325,12 @@ function CMegaDotaGameMode:OnThink()
 		for i = 0, 23 do
 			if PlayerResource:IsValidPlayer( i ) then
 				local hero = PlayerResource:GetSelectedHeroEntity( i )
-				if hero then
-					if hero:IsAlive() then
-						local pos = hero:GetAbsOrigin()
-						local sum = pos.x + pos.y
-						
-						if sum > 14150 or sum < -14350 or pos.x > 7750 or pos.x < -7750 or pos.y > 7500 or pos.y < -7300 then
-							hero:ForceKill(false)
-							-- Kill this unit immediately.
-						end
+				if hero and hero:IsAlive() then
+					local pos = hero:GetAbsOrigin()
+					
+					if IsInBugZone(pos) then
+						hero:ForceKill(false)
+						-- Kill this unit immediately.
 					end
 				end
 			end
