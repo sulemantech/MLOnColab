@@ -173,20 +173,16 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 		npc_dota_goodguys_melee_rax_mid = 2,
 		npc_dota_goodguys_range_rax_bot = 1,
 		npc_dota_goodguys_melee_rax_bot = 2,
-		npc_dota_badguys_range_rax_top = -1,
-		npc_dota_badguys_melee_rax_top = -2,
-		npc_dota_badguys_range_rax_mid = -1,
-		npc_dota_badguys_melee_rax_mid = -2,
-		npc_dota_badguys_range_rax_bot = -1,
-		npc_dota_badguys_melee_rax_bot = -2,
+		npc_dota_badguys_range_rax_top = 1,
+		npc_dota_badguys_melee_rax_top = 2,
+		npc_dota_badguys_range_rax_mid = 1,
+		npc_dota_badguys_melee_rax_mid = 2,
+		npc_dota_badguys_range_rax_bot = 1,
+		npc_dota_badguys_melee_rax_bot = 2,
 	}
 	if raxRespawnTimeWorth[name] ~= nil then
 		local opposingTeam = killedUnit:GetOpposingTeamNumber()
-		if raxRespawnTimeWorth[name] > 0 then
-			raxBonuses[opposingTeam] = raxBonuses[opposingTeam] + raxRespawnTimeWorth[name]
-		else
-			raxBonuses[opposingTeam] = raxBonuses[opposingTeam] - raxRespawnTimeWorth[name]
-		end
+		raxBonuses[opposingTeam] = raxBonuses[opposingTeam] + raxRespawnTimeWorth[name]
 		SendOverheadEventMessage( nil, OVERHEAD_ALERT_MANA_LOSS, killedUnit, math.abs(raxRespawnTimeWorth[name]), nil )
 		GameRules:SendCustomMessage("#destroyed_" .. string.sub(name,10,#name - 4),-1,0)
 		if raxBonuses[opposingTeam] == 9 then
