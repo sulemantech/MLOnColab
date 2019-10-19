@@ -183,7 +183,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	if raxRespawnTimeWorth[name] ~= nil then
 		local opposingTeam = killedUnit:GetOpposingTeamNumber()
 		raxBonuses[opposingTeam] = raxBonuses[opposingTeam] + raxRespawnTimeWorth[name]
-		SendOverheadEventMessage( nil, OVERHEAD_ALERT_MANA_LOSS, killedUnit, math.abs(raxRespawnTimeWorth[name]), nil )
+		SendOverheadEventMessage( nil, OVERHEAD_ALERT_MANA_LOSS, killedUnit, raxRespawnTimeWorth[name], nil )
 		GameRules:SendCustomMessage("#destroyed_" .. string.sub(name,10,#name - 4),-1,0)
 		if raxBonuses[opposingTeam] == 9 then
 			raxBonuses[opposingTeam] = 11
