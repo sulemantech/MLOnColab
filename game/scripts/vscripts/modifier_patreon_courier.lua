@@ -17,13 +17,6 @@ modifier_patreon_courier = {
 	end,
 	GetFixedDayVision = function() return 150 end,
 	GetFixedNightVision = function() return 150 end,
-
-	CheckState = function()
-		return {
-			--[MODIFIER_STATE_NO_HEALTH_BAR] = true,
-			--[MODIFIER_STATE_INVULNERABLE] = true,
-		}
-	end,
 }
 
 function modifier_patreon_courier:GetModifierMoveSpeed_Max()

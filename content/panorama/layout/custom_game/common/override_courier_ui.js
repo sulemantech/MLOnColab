@@ -1,22 +1,27 @@
-function FindDotaHudElement (id) {
-    return GetDotaHud().FindChildTraverse(id);
-}
+function SelectionCourierUpdate(msg) {
+    var needCourier = msg.newCourier;
+    var selected_entities = GetSelectedEntities();
+    var haveCourierInSelect = false;
+    var selectionCounter = 0;
+    var removeTatget = msg.removeCourier;
 
-function GetDotaHud ()
-{
-    var p = $.GetContextPanel();
-    try {
-        while (true) {
-            if (p.id === 'Hud') {
-                return p;
-            } else {
-                p = p.GetParent();
-            }
+    for (var i in selected_entities) {
+        if (Entities.IsCourier(selected_entities[i])){
+            haveCourierInSelect = true;
         }
-    } catch (e) {}
+        selectionCounter+=1;
+    };
+
+    Selection_Remove({entities:removeTatget})
+    if (haveCourierInSelect && selectionCounter < 2){
+        Selection_New({ entities:needCourier });
+    }else if(haveCourierInSelect){
+        Selection_Add({ entities:needCourier });
+    }
 }
 
 (function () {
+    GameEvents.Subscribe( "selection_courier_update", SelectionCourierUpdate);
     var playerId = Players.GetLocalPlayer()
     var selectCourietButton = FindDotaHudElement('SelectCourierButton')
     var deliverItemsButton = FindDotaHudElement('DeliverItemsButton')

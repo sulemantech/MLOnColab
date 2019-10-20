@@ -84,16 +84,3 @@ function GetDotaHud ()
         }
     } catch (e) {}
 }
-
-(function () {
-    var playerId = Players.GetLocalPlayer()
-    var selectCourietButton = FindDotaHudElement('SelectCourierButton')
-    var deliverItemsButton = FindDotaHudElement('DeliverItemsButton')
-
-    selectCourietButton.SetPanelEvent("onactivate", function () {
-        GameEvents.SendCustomGameEventToServer("courier_custom_select", {})
-    })
-    deliverItemsButton.SetPanelEvent("onactivate", function () {
-        GameEvents.SendCustomGameEventToServer("courier_custom_select_deliever_items", {})
-    })
-})();

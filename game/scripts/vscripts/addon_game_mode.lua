@@ -33,7 +33,6 @@ LinkLuaModifier("modifier_troll_debuff_stop_feed", 'anti_feed_system/modifier_tr
 
 _G.newStats = newStats or {}
 _G.personalCouriers = {}
-_G.selectionUnits = {}
 _G.mainTeamCouriers = {}
 
 _G.lastDeathTimes = {}
@@ -804,7 +803,6 @@ RegisterCustomEventListener("GetKicks", function(data)
     CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(data.id), "setkicks", {kicks = _G.kicks})
 end)
 
-
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	local orderType = filterTable.order_type
 	local playerId = filterTable.issuer_player_id_const
@@ -823,7 +821,7 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	if disableHelpResult == false then
 		return false
 	end
-	CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_refresh", { pID = playerId })
+
 	if _G.personalCouriers[playerId] then
 		local privateCourier = _G.personalCouriers[playerId]
 
@@ -836,7 +834,6 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 			unit = EntIndexToHScript(unitEntityIndex)
 			if unit:IsCourier() and unit ~= privateCourier and privateCourier:IsAlive() and (not privateCourier:IsStunned())then
 
-				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = { unitEntityIndex } })
 				for i, x in pairs(filterTable.units) do
 					if filterTable.units[i] == unitEntityIndex then
 						filterTable.units[i] = privateCourier:GetEntityIndex()
@@ -849,25 +846,9 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 					end
 				end
 
-				local newFocus = { privateCourier:GetEntityIndex() }
-				local haveCourierFocus = false
-				local selectionCounter = 0
+				local newFocus = {privateCourier:GetEntityIndex()}
 
-				Timers:CreateTimer(0.034, function()
-					if _G.selectionUnits[playerId] then
-						for i, x in pairs(_G.selectionUnits[playerId]) do
-							selectionCounter = selectionCounter + 1
-							if EntIndexToHScript(x):IsCourier() then
-								haveCourierFocus = true
-							end
-						end
-					end
-					if haveCourierFocus and selectionCounter < 2 then
-						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_new", { entities = newFocus })
-					elseif haveCourierFocus then
-						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_add", { entities = newFocus })
-					end
-				end)
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_courier_update", { newCourier = newFocus, removeCourier = { unitEntityIndex } })
 			end
 		end
 	end
@@ -908,11 +889,6 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 
 	return true
 end
-
-RegisterCustomEventListener("selection_update", function(data)
-	_G.selectionUnits[data.PlayerID] = data.entities
-end)
-
 
 RegisterCustomEventListener("courier_custom_select", function(data)
 	local playerID = data.PlayerID

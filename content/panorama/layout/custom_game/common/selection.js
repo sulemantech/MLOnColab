@@ -105,5 +105,4 @@ function GetSelectionOverride(entityIndex) {
     GameEvents.Subscribe( "selection_remove", Selection_Remove);
     GameEvents.Subscribe( "selection_reset", Selection_Reset);
     GameEvents.Subscribe( "selection_refresh", Selection_Refresh);
-
 })();
