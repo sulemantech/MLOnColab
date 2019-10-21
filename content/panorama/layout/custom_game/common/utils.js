@@ -66,21 +66,3 @@ function formatDate(date) {
 		? date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate()
 		: date.getMonth() + '/' + date.getDate() + '/' + date.getFullYear();
 }
-
-function FindDotaHudElement (id) {
-    return GetDotaHud().FindChildTraverse(id);
-}
-
-function GetDotaHud ()
-{
-    var p = $.GetContextPanel();
-    try {
-        while (true) {
-            if (p.id === 'Hud') {
-                return p;
-            } else {
-                p = p.GetParent();
-            }
-        }
-    } catch (e) {}
-}
