@@ -206,7 +206,6 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 			end
 		end
 		if player_id ~= -1 then
-
 			newStats[player_id] = newStats[player_id] or {
 				npc_dota_sentry_wards = 0,
 				npc_dota_observer_wards = 0,
