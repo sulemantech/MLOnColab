@@ -713,6 +713,10 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				"item_patreonbundle_1",
 				"item_patreonbundle_2"
 			}
+			if itemName == "item_patreon_courier" then
+				UTIL_Remove(hItem)
+				return false
+			end
 			local pitem = false
 			for i=1,#pitems do
 				if itemName == pitems[i] then
