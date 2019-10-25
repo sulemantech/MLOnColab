@@ -714,9 +714,15 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				"item_patreonbundle_2"
 			}
 			if itemName == "item_patreon_courier" then
+				if _G.personalCouriers[plyID] then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#alreadyhaveprivatecourier" })
+				else
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#nopatreonerror2" })
+				end
 				UTIL_Remove(hItem)
 				return false
 			end
+
 			local pitem = false
 			for i=1,#pitems do
 				if itemName == pitems[i] then
@@ -759,6 +765,17 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 					if prsh ~= nil then
 						if prsh:IsRealHero() then
 							local prshID = prsh:GetPlayerID()
+
+							if itemName == "item_patreon_courier" then
+								if _G.personalCouriers[prshID] then
+									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#alreadyhaveprivatecourier" })
+								else
+									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#nopatreonerror2" })
+								end
+								UTIL_Remove(hItem)
+								return false
+							end
+
 							if not prshID then
 								UTIL_Remove(hItem)
 								return false

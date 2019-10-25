@@ -71,7 +71,9 @@
 		"anti_feed_system_add_debuff_message"		                    "%s1 has been detected as feeding. For 10 minutes they will have 2.5x respawn rate and be denied upon dying."
 		
 		"cannotgiveiteminthiscourier"			                        "You cannot give item in this courier."
+		"alreadyhaveprivatecourier"			                            "You already have a private courier."
 		"DOTA_Tooltip_ability_item_patreon_courier"			            "Patreon Courier"
-        "DOTA_Tooltip_ability_item_patreon_courier_Description"			"You cannot buy this item. You can start the game with a private courier, if you support the game on patreon."
+        "DOTA_Tooltip_ability_item_patreon_courier_Description"			"You can start the game with a private courier, if you support the game on patreon."
+        "DOTA_Tooltip_ability_item_patreon_courier_Lore"			    "You cannot buy this item."
 	}
 }
