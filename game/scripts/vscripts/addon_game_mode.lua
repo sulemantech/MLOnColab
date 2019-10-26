@@ -6,15 +6,41 @@ local XP_SCALE_FACTOR_INITIAL = 2
 local XP_SCALE_FACTOR_FINAL = 2
 local XP_SCALE_FACTOR_FADEIN_SECONDS = (60 * 60) -- 60 minutes
 
+local game_start = true
+
+-- Anti feed system
+local TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER = 6000 -- Distance from allince Fountain
+local TROLL_FEED_BUFF_BASIC_TIME = (60 * 10)   -- 10 minutes
+local TROLL_FEED_TOTAL_RESPAWN_TIME_MULTIPLE = 2.5 -- x2.5 respawn time. If you respawn 100sec, after debuff you respawn 250sec
+local TROLL_FEED_INCREASE_BUFF_AFTER_DEATH = 60 -- 1 minute
+local TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN = -5 -- (Kill-Death)
+local TROLL_FEED_NEED_TOKEN_TO_BUFF = 3
+local TROLL_FEED_TOKEN_TIME_DIES_WITHIN = (60 * 1.5) -- 1.5 minutes
+local TROLL_FEED_TOKEN_DURATION = (60 * 5) -- 5 minutes
+local TROLL_FEED_MIN_RESPAWN_TIME = 60 -- 1 minute
+local TROLL_FEED_SYSTEM_ASSISTS_TO_KILL_MULTI = 0.5 -- 10 assists = 5 "kills"
+
 require("common/init")
 require("util")
-
 WebApi.customGame = "Dota12v12"
 
 LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_patreon_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_troll_feed_token", 'anti_feed_system/modifier_troll_feed_token', LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_troll_feed_token_couter", 'anti_feed_system/modifier_troll_feed_token_couter', LUA_MODIFIER_MOTION_NONE)
+LinkLuaModifier("modifier_troll_debuff_stop_feed", 'anti_feed_system/modifier_troll_debuff_stop_feed', LUA_MODIFIER_MOTION_NONE)
 
 _G.newStats = newStats or {}
+_G.personalCouriers = {}
+_G.mainTeamCouriers = {}
+
+_G.lastDeathTimes = {}
+_G.lastHeroKillers = {}
+_G.lastHerosPlaceLastDeath = {}
+_G.tableRadiantHeroes = {}
+_G.tableDireHeroes = {}
+_G.newRespawnTimes = {}
 
 if CMegaDotaGameMode == nil then
 	_G.CMegaDotaGameMode = class({}) -- put CMegaDotaGameMode in the global scope
@@ -42,6 +68,8 @@ function CMegaDotaGameMode:InitGameMode()
 	GameRules:GetGameModeEntity():SetModifierGainedFilter( Dynamic_Wrap( CMegaDotaGameMode, "ModifierGainedFilter" ), self )
 	GameRules:GetGameModeEntity():SetRuneSpawnFilter( Dynamic_Wrap( CMegaDotaGameMode, "RuneSpawnFilter" ), self )
 	GameRules:GetGameModeEntity():SetExecuteOrderFilter(Dynamic_Wrap(CMegaDotaGameMode, 'ExecuteOrderFilter'), self)
+	GameRules:GetGameModeEntity():SetDamageFilter( Dynamic_Wrap( CMegaDotaGameMode, "DamageFilter" ), self )
+
 
 	GameRules:GetGameModeEntity():SetTowerBackdoorProtectionEnabled( true )
 	GameRules:GetGameModeEntity():SetPauseEnabled(IsInToolsMode())
@@ -56,6 +84,9 @@ function CMegaDotaGameMode:InitGameMode()
 	ListenToGameEvent('game_rules_state_change', Dynamic_Wrap(CMegaDotaGameMode, 'OnGameRulesStateChange'), self)
 	ListenToGameEvent( "npc_spawned", Dynamic_Wrap( CMegaDotaGameMode, "OnNPCSpawned" ), self )
 	ListenToGameEvent( "entity_killed", Dynamic_Wrap( CMegaDotaGameMode, 'OnEntityKilled' ), self )
+	ListenToGameEvent("dota_player_pick_hero", Dynamic_Wrap(CMegaDotaGameMode, "OnHeroPicked"), self)
+
+
 
 	self.m_CurrentGoldScaleFactor = GOLD_SCALE_FACTOR_INITIAL
 	self.m_CurrentXpScaleFactor = XP_SCALE_FACTOR_INITIAL
@@ -157,15 +188,101 @@ function otherTeam(team)
     return -1
 end
 
+function UnitInSafeZone(unit , unitPosition)
+	local teamNumber = unit:GetTeamNumber()
+	local fountains = Entities:FindAllByClassname('ent_dota_fountain')
+	local allyFountainPosition
+	for i, focusFountain in pairs(fountains) do
+		if focusFountain:GetTeamNumber() == teamNumber then
+			allyFountainPosition = focusFountain:GetAbsOrigin()
+		end
+	end
+	return ((allyFountainPosition - unitPosition):Length2D()) <= TROLL_FEED_DISTANCE_FROM_FOUNTAIN_TRIGGER
+end
+
+function GetHeroKD(unit)
+	return (unit:GetKills() + (unit:GetAssists() * TROLL_FEED_SYSTEM_ASSISTS_TO_KILL_MULTI) - unit:GetDeaths())
+end
+
+function ItWorstKD(unit) -- use minimun TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN
+	local unitTeam = unit:GetTeamNumber()
+	local focusTableHeroes
+
+	if unitTeam == DOTA_TEAM_GOODGUYS then
+		focusTableHeroes = _G.tableRadiantHeroes
+	elseif unitTeam == DOTA_TEAM_BADGUYS then
+		focusTableHeroes = _G.tableDireHeroes
+	end
+
+	for i, focusHero in pairs(focusTableHeroes) do
+		local unitKD = GetHeroKD(unit)
+		if unitKD > TROLL_FEED_RATIO_KD_TO_TRIGGER_MIN then
+			return false
+		elseif GetHeroKD(focusHero) <= unitKD and unit ~= focusHero then
+			return false
+		end
+	end
+	return true
+end
+
+function CMegaDotaGameMode:OnHeroPicked(event)
+	local hero = EntIndexToHScript(event.heroindex)
+	if not hero then return end
+	
+	if hero:GetTeamNumber() == DOTA_TEAM_GOODGUYS then
+		table.insert(_G.tableRadiantHeroes, hero)
+	end
+
+	if hero:GetTeamNumber() == DOTA_TEAM_BADGUYS then
+		table.insert(_G.tableDireHeroes, hero)
+	end
+end
+---------------------------------------------------------------------------
+-- Filter: DamageFilter
+---------------------------------------------------------------------------
+function CMegaDotaGameMode:DamageFilter(event)
+	local entindex_victim_const = event.entindex_victim_const
+	local entindex_attacker_const = event.entindex_attacker_const
+	local death_unit
+	local killer
+
+	if (entindex_victim_const) then death_unit = EntIndexToHScript(entindex_victim_const) end
+	if (entindex_attacker_const) then killer = EntIndexToHScript(entindex_attacker_const) end
+
+	if death_unit and death_unit:HasModifier("modifier_troll_debuff_stop_feed") and (death_unit:GetHealth() <= event.damage) and (killer ~= death_unit) and (killer:GetTeamNumber()~=DOTA_TEAM_NEUTRALS) then
+		if ItWorstKD(death_unit) and (not (UnitInSafeZone(death_unit, _G.lastHerosPlaceLastDeath[death_unit]))) then
+			local newTime = death_unit:FindModifierByName("modifier_troll_debuff_stop_feed"):GetRemainingTime() + TROLL_FEED_INCREASE_BUFF_AFTER_DEATH
+			--death_unit:RemoveModifierByName("modifier_troll_debuff_stop_feed")
+			local normalRespawnTime =  death_unit:GetRespawnTime()
+			local addRespawnTime = normalRespawnTime * (TROLL_FEED_TOTAL_RESPAWN_TIME_MULTIPLE - 1)
+
+			if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
+				addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
+			end
+			death_unit:AddNewModifier(death_unit, nil, "modifier_troll_debuff_stop_feed", { duration = newTime, addRespawnTime = addRespawnTime })
+		end
+		death_unit:Kill(nil, death_unit)
+	end
+
+	return true
+end
+
 ---------------------------------------------------------------------------
 -- Event: OnEntityKilled
 ---------------------------------------------------------------------------
 function CMegaDotaGameMode:OnEntityKilled( event )
-    local killedUnit = EntIndexToHScript( event.entindex_killed )
-    local killer = EntIndexToHScript( event.entindex_attacker )
-	local killedTeam = killedUnit:GetTeam()
-	local name = killedUnit:GetUnitName()
-
+	local entindex_killed = event.entindex_killed
+    local entindex_attacker = event.entindex_attacker
+	local killedUnit
+    local killer
+	local name
+	
+	if (entindex_killed) then
+		killedUnit = EntIndexToHScript(entindex_killed)
+		name = killedUnit:GetUnitName()
+	end
+	if (entindex_attacker) then killer = EntIndexToHScript(entindex_attacker) end
+	
 	local raxRespawnTimeWorth = {
 		npc_dota_goodguys_range_rax_top = 1,
 		npc_dota_goodguys_melee_rax_top = 2,
@@ -194,9 +311,9 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 			end
 		end
 	end
-
-    --print("fired")
-    if killedUnit:IsRealHero() and not killedUnit:IsReincarnating() then
+	
+	--print("fired")
+    if killedUnit and killedUnit:IsRealHero() and not killedUnit:IsReincarnating() then
 		local player_id = -1
 		if killer and killer:IsRealHero() and killer.GetPlayerID then
 			player_id = killer:GetPlayerID()
@@ -206,6 +323,7 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 			end
 		end
 		if player_id ~= -1 then
+
 			newStats[player_id] = newStats[player_id] or {
 				npc_dota_sentry_wards = 0,
 				npc_dota_observer_wards = 0,
@@ -258,14 +376,50 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 	        timeLeft = 1
 	    end
 
-	    killedUnit:SetTimeUntilRespawn(timeLeft)
+		if killedUnit and (not killedUnit:HasModifier("modifier_troll_debuff_stop_feed")) and (not ItWorstKD(killedUnit)) then
+			killedUnit:SetTimeUntilRespawn(timeLeft)
+		end
     end
+
+	if killedUnit and killedUnit:IsRealHero() and (PlayerResource:GetSelectedHeroEntity(killedUnit:GetPlayerID())) then
+		_G.lastHeroKillers[killedUnit] = killer
+		_G.lastHerosPlaceLastDeath[killedUnit] = killedUnit:GetOrigin()
+		if (killer ~= killedUnit) then
+			_G.lastDeathTimes[killedUnit] = GameRules:GetGameTime()
+		end
+	end
 
 end
 
 LinkLuaModifier("modifier_rax_bonus", LUA_MODIFIER_MOTION_NONE)
-function CMegaDotaGameMode:OnNPCSpawned( event )
-	local spawnedUnit = EntIndexToHScript( event.entindex )
+function CMegaDotaGameMode:OnNPCSpawned(event)
+	local spawnedUnit = EntIndexToHScript(event.entindex)
+	local tokenTrollCouter = "modifier_troll_feed_token_couter"
+
+	-- Assignment of tokens during quick death, maximum 3
+	if (_G.lastDeathTimes[spawnedUnit] ~= nil) and (spawnedUnit:GetDeaths() > 1) and ((GameRules:GetGameTime() - _G.lastDeathTimes[spawnedUnit]) < TROLL_FEED_TOKEN_TIME_DIES_WITHIN) and not spawnedUnit:HasModifier("modifier_troll_debuff_stop_feed") and (_G.lastHeroKillers[spawnedUnit]~=spawnedUnit) and (not (UnitInSafeZone(spawnedUnit, _G.lastHerosPlaceLastDeath[spawnedUnit]))) and (_G.lastHeroKillers[spawnedUnit]:GetTeamNumber()~=DOTA_TEAM_NEUTRALS) then
+		local maxToken = TROLL_FEED_NEED_TOKEN_TO_BUFF
+		local currentStackTokenCouter = spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit)
+		local needToken = currentStackTokenCouter + 1
+		if needToken > maxToken then
+			needToken = maxToken
+		end
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, tokenTrollCouter, { duration = TROLL_FEED_TOKEN_DURATION })
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_feed_token", { duration = TROLL_FEED_TOKEN_DURATION })
+		spawnedUnit:SetModifierStackCount(tokenTrollCouter, spawnedUnit, needToken)
+	end
+
+	-- Issuing a debuff if 3 quick deaths have accumulated and the hero has the worst KD in the team
+	if spawnedUnit:GetModifierStackCount(tokenTrollCouter, spawnedUnit) == 3 and ItWorstKD(spawnedUnit) then
+		spawnedUnit:RemoveModifierByName(tokenTrollCouter)
+		local normalRespawnTime = spawnedUnit:GetRespawnTime()
+		local addRespawnTime = normalRespawnTime * (TROLL_FEED_TOTAL_RESPAWN_TIME_MULTIPLE - 1)
+		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
+			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
+		end
+		GameRules:SendCustomMessage("#anti_feed_system_add_debuff_message", spawnedUnit:GetPlayerID(), 0)
+		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = TROLL_FEED_BUFF_BASIC_TIME, addRespawnTime = addRespawnTime })
+	end
 
 	local owner = spawnedUnit:GetOwner()
 	local name = spawnedUnit:GetUnitName()
@@ -286,6 +440,7 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 	if spawnedUnit:IsRealHero() then
 		-- Silencer Nerf
 		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_rax_bonus", {})
+		local playerId = spawnedUnit:GetPlayerID()
 		Timers:CreateTimer(1, function()
 			if spawnedUnit:HasModifier("modifier_silencer_int_steal") then
 				spawnedUnit:RemoveModifierByName('modifier_silencer_int_steal')
@@ -300,11 +455,27 @@ function CMegaDotaGameMode:OnNPCSpawned( event )
 		if not spawnedUnit.firstTimeSpawned then
 			spawnedUnit.firstTimeSpawned = true
 			spawnedUnit:SetContextThink("HeroFirstSpawn", function()
-				local playerId = spawnedUnit:GetPlayerID()
+
 				if spawnedUnit == PlayerResource:GetSelectedHeroEntity(playerId) then
 					Patreons:GiveOnSpawnBonus(playerId)
 				end
 			end, 2/30)
+		end
+
+		local psets = Patreons:GetPlayerSettings(playerId)
+
+		if psets.level > 1 and _G.personalCouriers[playerId] == nil then
+			local courier_spawn = {
+				[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant"),
+				[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire"),
+			}
+			local team = spawnedUnit:GetTeamNumber()
+			local cr = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin() + RandomVector(RandomFloat(100, 100)), true, nil, nil, team)
+			cr:AddNewModifier(cr, nil, "modifier_patreon_courier", {})
+			Timers:CreateTimer(.1, function()
+				cr:SetControllableByPlayer(spawnedUnit:GetPlayerID(), true)
+				_G.personalCouriers[playerId] = cr;
+			end)
 		end
 	end
 end
@@ -500,7 +671,7 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
         }
 
         local fountains = Entities:FindAllByClassname('ent_dota_fountain')
-        -- Loop over all ents
+		-- Loop over all ents
         for k,fountain in pairs(fountains) do
             for skillName,skillLevel in pairs(toAdd) do
                 fountain:AddAbility(skillName)
@@ -517,15 +688,20 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
 
         end
 
-		local courier_spawn = {}
-		courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
-		courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
+		if game_start then
+			local courier_spawn = {}
+			courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
+			courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
 
-		for team = 2, 3 do
-			self.couriers[team] = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin(), true, nil, nil, team)
-			self.couriers[team]:AddNewModifier(self.couriers[team], nil, "modifier_core_courier", {})
+			for team = 2, 3 do
+				self.couriers[team] = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin(), true, nil, nil, team)
+				if _G.mainTeamCouriers[team] == nil then
+					_G.mainTeamCouriers[team] = self.couriers[team]
+				end
+				self.couriers[team]:AddNewModifier(self.couriers[team], nil, "modifier_core_courier", {})
+			end
+			game_start = false
 		end
-
 --		Timers:CreateTimer(30, function()
 --			for i=0,PlayerResource:GetPlayerCount() do
 --				local hero = PlayerResource:GetSelectedHeroEntity(i)
@@ -575,6 +751,16 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				"item_patreonbundle_1",
 				"item_patreonbundle_2"
 			}
+			if itemName == "item_patreon_courier" then
+				if _G.personalCouriers[plyID] then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#alreadyhaveprivatecourier" })
+				else
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#nopatreonerror2" })
+				end
+				UTIL_Remove(hItem)
+				return false
+			end
+
 			local pitem = false
 			for i=1,#pitems do
 				if itemName == pitems[i] then
@@ -590,6 +776,7 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 					return false
 				end
 			end
+
 			if itemName == "item_banhammer" then
 				local psets = Patreons:GetPlayerSettings(plyID)
 				if psets.level < 2 then
@@ -608,7 +795,7 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 			local pitems = {
 				"item_patreonbundle_1",
 				"item_patreonbundle_2",
-				"item_banhammer"
+				"item_banhammer",
 			}
 			for i=1,#pitems do
 				if itemName == pitems[i] then
@@ -616,6 +803,17 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 					if prsh ~= nil then
 						if prsh:IsRealHero() then
 							local prshID = prsh:GetPlayerID()
+
+							if itemName == "item_patreon_courier" then
+								if _G.personalCouriers[prshID] then
+									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#alreadyhaveprivatecourier" })
+								else
+									CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(prshID), "display_custom_error", { message = "#nopatreonerror2" })
+								end
+								UTIL_Remove(hItem)
+								return false
+							end
+
 							if not prshID then
 								UTIL_Remove(hItem)
 								return false
@@ -665,7 +863,6 @@ RegisterCustomEventListener("GetKicks", function(data)
 end)
 
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
-	-- DeepPrintTable({ order = filterTable })
 	local orderType = filterTable.order_type
 	local playerId = filterTable.issuer_player_id_const
 	local target = filterTable.entindex_target ~= 0 and EntIndexToHScript(filterTable.entindex_target) or nil
@@ -682,6 +879,37 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	local disableHelpResult = DisableHelp.ExecuteOrderFilter(orderType, ability, target, unit)
 	if disableHelpResult == false then
 		return false
+	end
+
+	if _G.personalCouriers[playerId] then
+		local privateCourier = _G.personalCouriers[playerId]
+
+		if orderType == DOTA_UNIT_ORDER_GIVE_ITEM and target:IsCourier() and target ~= privateCourier and privateCourier:IsAlive() and (not privateCourier:IsStunned())then
+			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#cannotgiveiteminthiscourier" })
+			return false
+		end
+
+		for _, unitEntityIndex in pairs(filterTable.units) do
+			unit = EntIndexToHScript(unitEntityIndex)
+			if unit:IsCourier() and unit ~= privateCourier and privateCourier:IsAlive() and (not privateCourier:IsStunned())then
+
+				for i, x in pairs(filterTable.units) do
+					if filterTable.units[i] == unitEntityIndex then
+						filterTable.units[i] = privateCourier:GetEntityIndex()
+					end
+				end
+
+				for i = 0, 20 do
+					if filterTable.entindex_ability and privateCourier:GetAbilityByIndex(i) and ability and privateCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
+						filterTable.entindex_ability = privateCourier:GetAbilityByIndex(i):GetEntityIndex()
+					end
+				end
+
+				local newFocus = {privateCourier:GetEntityIndex()}
+
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_courier_update", { newCourier = newFocus, removeCourier = { unitEntityIndex } })
+			end
+		end
 	end
 
 	if orderType == DOTA_UNIT_ORDER_CAST_POSITION then
@@ -720,6 +948,64 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 
 	return true
 end
+
+RegisterCustomEventListener("courier_custom_select", function(data)
+	local playerID = data.PlayerID
+	if not playerID then return end
+	local player = PlayerResource:GetPlayer(playerID)
+	local team = player:GetTeamNumber()
+	local currentCourier = false
+
+	if _G.personalCouriers[playerID] and _G.personalCouriers[playerID]:IsAlive() then
+		currentCourier = { _G.personalCouriers[playerID]:GetEntityIndex() }
+	elseif _G.mainTeamCouriers[team]:IsAlive() then
+		currentCourier = { _G.mainTeamCouriers[team]:GetEntityIndex() }
+	end
+
+	if not currentCourier then return end
+	CustomGameEventManager:Send_ServerToPlayer(player, "selection_new", { entities = currentCourier })
+end)
+
+function unitMoveToPoint(unit, point)
+	ExecuteOrderFromTable({
+		UnitIndex = unit:entindex(),
+		OrderType = DOTA_UNIT_ORDER_MOVE_TO_POSITION,
+		Position = point
+	})
+end
+
+RegisterCustomEventListener("courier_custom_select_deliever_items", function(data)
+	local playerID = data.PlayerID
+	if not playerID then return end
+	local player = PlayerResource:GetPlayer(playerID)
+	local team = player:GetTeamNumber()
+	local currentCourier = false
+
+	if _G.personalCouriers[playerID] and _G.personalCouriers[playerID]:IsAlive() then
+		currentCourier = _G.personalCouriers[playerID]
+	elseif _G.mainTeamCouriers[team]:IsAlive() then
+		currentCourier = _G.mainTeamCouriers[team]
+	end
+
+	if not currentCourier then return end
+	if currentCourier:IsStunned() then return end
+
+	local stashHasItems = false
+
+	for i = 9, 14 do
+		local item = player:GetAssignedHero():GetItemInSlot(i)
+		if item ~= nil then
+			stashHasItems = true
+		end
+	end
+
+	if stashHasItems then
+		currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(7), playerID)
+	else
+		unitMoveToPoint(currentCourier, player:GetAssignedHero():GetAbsOrigin())
+		currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(4), playerID)
+	end
+end)
 
 msgtimer = {}
 RegisterCustomEventListener("OnTimerClick", function(keys)
