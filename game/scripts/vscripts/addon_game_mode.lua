@@ -438,8 +438,8 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 	end
 
 	if spawnedUnit:IsRealHero() then
-		-- Silencer Nerf
 		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_rax_bonus", {})
+		-- Silencer Nerf
 		local playerId = spawnedUnit:GetPlayerID()
 		Timers:CreateTimer(1, function()
 			if spawnedUnit:HasModifier("modifier_silencer_int_steal") then
