@@ -85,6 +85,8 @@ function CMegaDotaGameMode:InitGameMode()
 	ListenToGameEvent( "npc_spawned", Dynamic_Wrap( CMegaDotaGameMode, "OnNPCSpawned" ), self )
 	ListenToGameEvent( "entity_killed", Dynamic_Wrap( CMegaDotaGameMode, 'OnEntityKilled' ), self )
 	ListenToGameEvent("dota_player_pick_hero", Dynamic_Wrap(CMegaDotaGameMode, "OnHeroPicked"), self)
+	ListenToGameEvent('player_connect_full', Dynamic_Wrap(CMegaDotaGameMode, 'OnConnectFull'), self)
+	ListenToGameEvent('player_disconnect', Dynamic_Wrap(CMegaDotaGameMode, 'OnPlayerDisconnect'), self)
 
 
 
@@ -852,6 +854,14 @@ end
 RegisterCustomEventListener("GetKicks", function(data)
     CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(data.id), "setkicks", {kicks = _G.kicks})
 end)
+
+function CMegaDotaGameMode:OnConnectFull(data)
+	CustomGameEventManager:Send_ServerToAllClients( "change_leave_status", {leave = false, playerId = data.PlayerID} )
+end
+
+function CMegaDotaGameMode:OnPlayerDisconnect(data)
+	CustomGameEventManager:Send_ServerToAllClients( "change_leave_status", {leave = true, playerId = data.userid} )
+end
 
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	local orderType = filterTable.order_type
