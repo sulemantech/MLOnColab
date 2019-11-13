@@ -900,7 +900,7 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 			end
 		end
 
-		if hItem:GetPurchaser() and not hItem:GetPurchaser():CheckPersonalCooldown(itemName) then
+		if (filterTable["item_parent_entindex_const"] > 0) and hItem:GetPurchaser() and not hItem:GetPurchaser():CheckPersonalCooldown(itemName) then
 			hItem:GetPurchaser():ModifyGold(hItem:GetCost(), false, 0)
 			UTIL_Remove(hItem)
 			return false
