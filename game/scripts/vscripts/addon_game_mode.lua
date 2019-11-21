@@ -800,12 +800,12 @@ function FindItemByName(item, itemName, hero, playerId)
 		end
 	end
 
-	for i = 0, 10 do
-		local item = SearchCorrectCourier(playerId, hero:GetTeamNumber()):GetItemInSlot(i)
-		if item and item:GetAbilityName() == itemName then
-			return item
-		end
-	end
+--	for i = 0, 10 do
+--		local item = SearchCorrectCourier(playerId, hero:GetTeamNumber()):GetItemInSlot(i)
+--		if item and item:GetAbilityName() == itemName then
+--			return i
+--		end
+--	end
 
 	return false
 end
@@ -935,40 +935,77 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 			return false
 		end
 
-		if  hItem:GetPurchaser() and (itemName == "item_relic" or itemName == "item_demon_edge" or itemName == "item_recipe_rapier")then
+		if  hItem:GetPurchaser() and (itemName == "item_relic")then
 			local buyer = hItem:GetPurchaser()
 			local plyID = buyer:GetPlayerID()
-			local fullRapierCost = 6010
-			Timers:CreateTimer(0.06, function()
-				local rapierSlot = FindItemByName(hItem, "item_rapier", buyer, plyID)
-
-				local relicSlot = FindItemByName(hItem, "item_relic", buyer, plyID)
-				local demonEdgeSlot = FindItemByName(hItem, "item_demon_edge", buyer, plyID)
-				local demonEdgeSlot = FindItemByName(hItem, "item_recipe_rapier", buyer, plyID)
-
-				if rapierSlot and (not relicSlot) and (not demonEdgeSlot) then
-					if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost) < NET_WORSE_FOR_RAPIER_MIN then
-						--print("Your networse < 20000")
-						UTIL_Remove(rapierSlot)
-						buyer:ModifyGold(fullRapierCost, false, 0)
-					else
-						if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
-							Timers:CreateTimer(0.035, function()
-								--print("Add rapier on team")
-								_G.playerHasFirstRapier[plyID] = true
-							end)
-						elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
-							--print("Team doesn't have 1 rapier, but your KD<5")
-							UTIL_Remove(rapierSlot)
-							buyer:ModifyGold(fullRapierCost, false, 0)
-						elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
-							--print("Team has 1 rapier, but your KD<10")
-							UTIL_Remove(rapierSlot)
-							buyer:ModifyGold(fullRapierCost, false, 0)
+			local itemEntIndex = hItem:GetEntityIndex()
+			Timers:CreateTimer("seacrh_rapier_on_player"..itemEntIndex, {
+				useGameTime = false,
+				endTime = 0.4,
+				callback = function()
+					local fullRapierCost = 6000
+					for i = 0, 20 do
+						local item = buyer:GetItemInSlot(i)
+						if item and item:GetAbilityName() == "item_rapier" and ((item.defend == nil) or (item.defend == false)) then
+							if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost) < NET_WORSE_FOR_RAPIER_MIN then
+								UTIL_Remove(item)
+								buyer:ModifyGold(fullRapierCost, false, 0)
+								return nil
+							else
+								if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
+									Timers:CreateTimer(0.07, function()
+										item.defend = true
+										_G.playerHasFirstRapier[plyID] = true
+									end)
+									return nil
+								elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
+									UTIL_Remove(item)
+									buyer:ModifyGold(fullRapierCost, false, 0)
+									return nil
+								elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
+									UTIL_Remove(item)
+									buyer:ModifyGold(fullRapierCost, false, 0)
+									return nil
+								elseif (GetHeroKD(buyer) >= OTHER_RAPIER_KD_MIN) then
+									item.defend = true
+									return nil
+								end
+							end
 						end
 					end
+
+					for i = 0, 10 do
+						local item = SearchCorrectCourier(plyID, buyer:GetTeamNumber()):GetItemInSlot(i)
+						if item and item:GetAbilityName() == "item_rapier" and ((item.defend == nil) or (item.defend == false)) then
+							if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost) < NET_WORSE_FOR_RAPIER_MIN then
+								UTIL_Remove(item)
+								buyer:ModifyGold(fullRapierCost, false, 0)
+								return nil
+							else
+								if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
+									Timers:CreateTimer(0.07, function()
+										item.defend = true
+										_G.playerHasFirstRapier[plyID] = true
+									end)
+									return nil
+								elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
+									UTIL_Remove(item)
+									buyer:ModifyGold(fullRapierCost, false, 0)
+									return nil
+								elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
+									UTIL_Remove(item)
+									buyer:ModifyGold(fullRapierCost, false, 0)
+									return nil
+								elseif (GetHeroKD(buyer) >= OTHER_RAPIER_KD_MIN) then
+									item.defend = true
+									return nil
+								end
+							end
+						end
+					end
+					return 0.45
 				end
-			end)
+			})
 		end
 
 		if _G.fastItemsWithCooldown[itemName] then
@@ -1053,6 +1090,24 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	}
 
 	if orderType == DOTA_UNIT_ORDER_DROP_ITEM or orderType == DOTA_UNIT_ORDER_EJECT_ITEM_FROM_STASH then
+		if ability:GetAbilityName() == "item_relic" then
+			return false
+		end
+	end
+
+	if  orderType == DOTA_UNIT_ORDER_SELL_ITEM  then
+		if ability:GetAbilityName() == "item_relic" then
+			Timers:RemoveTimer("seacrh_rapier_on_player"..filterTable.entindex_ability)
+		end
+	end
+
+	if orderType == DOTA_UNIT_ORDER_GIVE_ITEM then
+		if target:GetClassname() == "ent_dota_shop" and ability:GetAbilityName() == "item_relic" then
+			Timers:RemoveTimer("seacrh_rapier_on_player"..ability:GetEntityIndex())
+		end
+	end
+
+	if orderType == DOTA_UNIT_ORDER_DROP_ITEM or orderType == DOTA_UNIT_ORDER_EJECT_ITEM_FROM_STASH then
 		if ability and itemsToBeDestroy[ability:GetAbilityName()] then
 			ability:Destroy()
 		end
@@ -1068,9 +1123,9 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	if disableHelpResult == false then
 		return false
 	end
-
-	filterTable = EditFilterToCourier(filterTable)
-
+	if filterTable then
+		filterTable = EditFilterToCourier(filterTable)
+	end
 	if orderType == DOTA_UNIT_ORDER_CAST_POSITION then
 		if abilityName == "item_ward_dispenser" or abilityName == "item_ward_sentry" or abilityName == "item_ward_observer" then
 			local list = Entities:FindAllByClassname("trigger_multiple")

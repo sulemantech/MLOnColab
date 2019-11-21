@@ -422,9 +422,4 @@
 		"ItemInitialStockTime"			"690.0"
 		"BonusDelayedStockCount"		"4"
 	}
-
-	"item_recipe_rapier"
-	{
-		"ItemCost"						"10"
-	}
 }
