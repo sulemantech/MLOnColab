@@ -22,8 +22,6 @@ local TROLL_FEED_SYSTEM_ASSISTS_TO_KILL_MULTI = 0.5 -- 10 assists = 5 "kills"
 
 --Requirements to Buy Divine Rapier
 local NET_WORSE_FOR_RAPIER_MIN = 20000
-local FIRST_RAPIER_KD_MIN = 5
-local OTHER_RAPIER_KD_MIN = 10
 
 require("common/init")
 require("util")
@@ -53,6 +51,7 @@ _G.itemsIsBuy = {}
 _G.lastTimeBuyItemWithCooldown = {}
 
 _G.playerHasFirstRapier = {}
+_G.playersHetWorth = {}
 
 _G.fastItemsWithCooldown = {
 	["item_disable_help_custom"] = 10,
@@ -797,29 +796,29 @@ function SearchAndCheckRapiers(buyer, unit, plyID, maxSlots)
 	for i = 0, maxSlots do
 		local item = unit:GetItemInSlot(i)
 		if item and item:GetAbilityName() == "item_rapier" and ((item.defend == nil) or (item.defend == false)) then
-			if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID)) < NET_WORSE_FOR_RAPIER_MIN then
+			if _G.playersHetWorth[plyID] == nil then
+				_G.playersHetWorth[plyID] = PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID)
+			end
+			if _G.playersHetWorth[plyID] and (_G.playersHetWorth[plyID] < NET_WORSE_FOR_RAPIER_MIN) then
 				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_small_networth" })
 				UTIL_Remove(item)
+				_G.playersHetWorth[plyID] = (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost)
 				buyer:ModifyGold(fullRapierCost, false, 0)
 				return nil
 			else
-				if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
+				if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) > 0) then
 					Timers:CreateTimer(0.07, function()
 						item.defend = true
 						_G.playerHasFirstRapier[plyID] = true
 					end)
 					return nil
-				elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_littleKD_1" })
+				elseif (GetHeroKD(buyer) < 0) then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_littleKD" })
 					UTIL_Remove(item)
+					_G.playersHetWorth[plyID] = (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID))
 					buyer:ModifyGold(fullRapierCost, false, 0)
 					return nil
-				elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
-					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_littleKD_2" })
-					UTIL_Remove(item)
-					buyer:ModifyGold(fullRapierCost, false, 0)
-					return nil
-				elseif (GetHeroKD(buyer) >= OTHER_RAPIER_KD_MIN) then
+				elseif (GetHeroKD(buyer) > 0) then
 					item.defend = true
 					return nil
 				end
