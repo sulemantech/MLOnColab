@@ -20,6 +20,11 @@ local TROLL_FEED_TOKEN_DURATION = (60 * 5) -- 5 minutes
 local TROLL_FEED_MIN_RESPAWN_TIME = 60 -- 1 minute
 local TROLL_FEED_SYSTEM_ASSISTS_TO_KILL_MULTI = 0.5 -- 10 assists = 5 "kills"
 
+--Requirements to Buy Divine Rapier
+local NET_WORSE_FOR_RAPIER_MIN = 20000
+local FIRST_RAPIER_KD_MIN = 5
+local OTHER_RAPIER_KD_MIN = 10
+
 require("common/init")
 require("util")
 require("personal_items_cooldown")
@@ -46,6 +51,8 @@ _G.newRespawnTimes = {}
 
 _G.itemsIsBuy = {}
 _G.lastTimeBuyItemWithCooldown = {}
+
+_G.teamHasFirstRapier = {}
 
 _G.fastItemsWithCooldown = {
 	["item_disable_help_custom"] = 10,
@@ -785,6 +792,24 @@ function DoesHeroHasFreeSlot(unit)
 	return false
 end
 
+function FindItemByName(item, itemName, hero, playerId)
+	for i = 0, 20 do
+		local item = hero:GetItemInSlot(i)
+		if item and item:GetAbilityName() == itemName then
+			return item
+		end
+	end
+
+	for i = 0, 10 do
+		local item = SearchCorrectCourier(playerId, hero:GetTeamNumber()):GetItemInSlot(i)
+		if item and item:GetAbilityName() == itemName then
+			return item
+		end
+	end
+
+	return false
+end
+
 function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 	if filterTable["item_entindex_const"] == nil then
 		return true
@@ -908,6 +933,40 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 			hItem:GetPurchaser():ModifyGold(hItem:GetCost(), false, 0)
 			UTIL_Remove(hItem)
 			return false
+		end
+
+		if  hItem:GetPurchaser() and (itemName == "item_relic" or itemName == "item_demon_edge")then
+			local buyer = hItem:GetPurchaser()
+			local plyID = buyer:GetPlayerID()
+			local fullRapierCost = 6010
+			Timers:CreateTimer(0.06, function()
+				local rapierSlot = FindItemByName(hItem, "item_rapier", buyer, plyID)
+				local relicSlot = FindItemByName(hItem, "item_relic", buyer, plyID)
+				local demonEdgeSlot = FindItemByName(hItem, "item_demon_edge", buyer, plyID)
+
+				if rapierSlot and (not relicSlot) and (not demonEdgeSlot) then
+					if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost) < NET_WORSE_FOR_RAPIER_MIN then
+						--print("Your networse < 20000")
+						UTIL_Remove(rapierSlot)
+						buyer:ModifyGold(fullRapierCost, false, 0)
+					else
+						if (_G.teamHasFirstRapier[buyer:GetTeamNumber()] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
+							Timers:CreateTimer(0.035, function()
+								--print("Add rapier on team")
+								_G.teamHasFirstRapier[buyer:GetTeamNumber()] = true
+							end)
+						elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
+							--print("Team doesn't have 1 rapier, but your KD<5")
+							UTIL_Remove(rapierSlot)
+							buyer:ModifyGold(fullRapierCost, false, 0)
+						elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
+							--print("Team has 1 rapier, but your KD<10")
+							UTIL_Remove(rapierSlot)
+							buyer:ModifyGold(fullRapierCost, false, 0)
+						end
+					end
+				end
+			end)
 		end
 
 		if _G.fastItemsWithCooldown[itemName] then
