@@ -792,22 +792,40 @@ function DoesHeroHasFreeSlot(unit)
 	return false
 end
 
-function FindItemByName(item, itemName, hero, playerId)
-	for i = 0, 20 do
-		local item = hero:GetItemInSlot(i)
-		if item and item:GetAbilityName() == itemName then
-			return item
+function SearchAndCheckRapiers(buyer, unit, plyID, maxSlots)
+	local fullRapierCost = 6000
+	for i = 0, maxSlots do
+		local item = unit:GetItemInSlot(i)
+		if item and item:GetAbilityName() == "item_rapier" and ((item.defend == nil) or (item.defend == false)) then
+			if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID)) < NET_WORSE_FOR_RAPIER_MIN then
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_small_networth" })
+				UTIL_Remove(item)
+				buyer:ModifyGold(fullRapierCost, false, 0)
+				return nil
+			else
+				if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
+					Timers:CreateTimer(0.07, function()
+						item.defend = true
+						_G.playerHasFirstRapier[plyID] = true
+					end)
+					return nil
+				elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_littleKD_1" })
+					UTIL_Remove(item)
+					buyer:ModifyGold(fullRapierCost, false, 0)
+					return nil
+				elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
+					CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_littleKD_2" })
+					UTIL_Remove(item)
+					buyer:ModifyGold(fullRapierCost, false, 0)
+					return nil
+				elseif (GetHeroKD(buyer) >= OTHER_RAPIER_KD_MIN) then
+					item.defend = true
+					return nil
+				end
+			end
 		end
 	end
-
---	for i = 0, 10 do
---		local item = SearchCorrectCourier(playerId, hero:GetTeamNumber()):GetItemInSlot(i)
---		if item and item:GetAbilityName() == itemName then
---			return i
---		end
---	end
-
-	return false
 end
 
 function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
@@ -944,65 +962,8 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				endTime = 0.4,
 				callback = function()
 					local fullRapierCost = 6000
-					for i = 0, 20 do
-						local item = buyer:GetItemInSlot(i)
-						if item and item:GetAbilityName() == "item_rapier" and ((item.defend == nil) or (item.defend == false)) then
-							if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost) < NET_WORSE_FOR_RAPIER_MIN then
-								UTIL_Remove(item)
-								buyer:ModifyGold(fullRapierCost, false, 0)
-								return nil
-							else
-								if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
-									Timers:CreateTimer(0.07, function()
-										item.defend = true
-										_G.playerHasFirstRapier[plyID] = true
-									end)
-									return nil
-								elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
-									UTIL_Remove(item)
-									buyer:ModifyGold(fullRapierCost, false, 0)
-									return nil
-								elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
-									UTIL_Remove(item)
-									buyer:ModifyGold(fullRapierCost, false, 0)
-									return nil
-								elseif (GetHeroKD(buyer) >= OTHER_RAPIER_KD_MIN) then
-									item.defend = true
-									return nil
-								end
-							end
-						end
-					end
-
-					for i = 0, 10 do
-						local item = SearchCorrectCourier(plyID, buyer:GetTeamNumber()):GetItemInSlot(i)
-						if item and item:GetAbilityName() == "item_rapier" and ((item.defend == nil) or (item.defend == false)) then
-							if (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost) < NET_WORSE_FOR_RAPIER_MIN then
-								UTIL_Remove(item)
-								buyer:ModifyGold(fullRapierCost, false, 0)
-								return nil
-							else
-								if (_G.playerHasFirstRapier[plyID] == nil) and (GetHeroKD(buyer) >= FIRST_RAPIER_KD_MIN) then
-									Timers:CreateTimer(0.07, function()
-										item.defend = true
-										_G.playerHasFirstRapier[plyID] = true
-									end)
-									return nil
-								elseif GetHeroKD(buyer) < FIRST_RAPIER_KD_MIN then
-									UTIL_Remove(item)
-									buyer:ModifyGold(fullRapierCost, false, 0)
-									return nil
-								elseif GetHeroKD(buyer) < OTHER_RAPIER_KD_MIN then
-									UTIL_Remove(item)
-									buyer:ModifyGold(fullRapierCost, false, 0)
-									return nil
-								elseif (GetHeroKD(buyer) >= OTHER_RAPIER_KD_MIN) then
-									item.defend = true
-									return nil
-								end
-							end
-						end
-					end
+					SearchAndCheckRapiers(buyer, buyer, plyID, 20)
+					SearchAndCheckRapiers(buyer, SearchCorrectCourier(plyID, buyer:GetTeamNumber()), plyID, 10)
 					return 0.45
 				end
 			})
@@ -1091,6 +1052,7 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 
 	if orderType == DOTA_UNIT_ORDER_DROP_ITEM or orderType == DOTA_UNIT_ORDER_EJECT_ITEM_FROM_STASH then
 		if ability:GetAbilityName() == "item_relic" then
+			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#cannotpullit" })
 			return false
 		end
 	end
