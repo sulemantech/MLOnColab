@@ -39,6 +39,7 @@ LinkLuaModifier("modifier_troll_debuff_stop_feed", 'anti_feed_system/modifier_tr
 _G.newStats = newStats or {}
 _G.personalCouriers = {}
 _G.mainTeamCouriers = {}
+_G.trollList = {}
 
 _G.lastDeathTimes = {}
 _G.lastHeroKillers = {}
@@ -798,7 +799,13 @@ function SearchAndCheckRapiers(buyer, unit, plyID, maxSlots, timerKey)
 			if _G.playersNetWorthes[plyID] == nil then
 				_G.playersNetWorthes[plyID] = PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID)
 			end
-			if _G.playersNetWorthes[plyID] and (_G.playersNetWorthes[plyID] < NET_WORSE_FOR_RAPIER_MIN) then
+			if _G.trollList[plyID] then
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#you_cannot_buy_it" })
+				UTIL_Remove(item)
+				_G.playersNetWorthes[plyID] = (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID))
+				buyer:ModifyGold(fullRapierCost, false, 0)
+				Timers:RemoveTimer(timerKey)
+			elseif _G.playersNetWorthes[plyID] and (_G.playersNetWorthes[plyID] < NET_WORSE_FOR_RAPIER_MIN) then
 				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#rapier_small_networth" })
 				UTIL_Remove(item)
 				_G.playersNetWorthes[plyID] = (PlayerResource:GetTotalGoldSpent(plyID) + PlayerResource:GetGold(plyID) - fullRapierCost)
