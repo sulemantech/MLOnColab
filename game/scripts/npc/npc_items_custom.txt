@@ -414,6 +414,34 @@
 		}
 	}
 
+	"item_voiting_troll"
+	{
+		"BaseClass"						"item_datadriven"
+		"AbilityTextureName"			"custom/banana"
+		"AbilityBehavior"				"DOTA_ABILITY_BEHAVIOR_UNIT_TARGET"
+		"AbilityUnitTargetTeam"			"DOTA_UNIT_TARGET_TEAM_FRIENDLY"
+		"AbilityUnitTargetType"			"DOTA_UNIT_TARGET_HERO"
+		"AbilityCastRange"				"99999"
+
+		"ItemQuality"					"artifact"
+
+		"ItemStackable"					"0"
+		"ItemPermanent"					"0"
+		"ItemHideCharges"				"0"
+		"CastFilterRejectCaster" 		"0"
+		"IsTempestDoubleClonable"		"0"
+		"ShouldBeInitiallySuggested"	"1"
+
+		"OnSpellStart"
+		{
+			"RunScript"
+			{
+				"ScriptFile"	"items/voiting_troll/item_voiting_troll"
+				"Function"	    "OnSpellStartVoite"
+			}
+		}
+	}
+
 	"item_tome_of_knowledge"
 	{
 		"AbilityCooldown"				"300.0"

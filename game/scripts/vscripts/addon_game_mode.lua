@@ -37,6 +37,9 @@ _G.newStats = newStats or {}
 _G.personalCouriers = {}
 _G.mainTeamCouriers = {}
 
+_G.playersVoices = {} -- в addon_game_mode
+_G.trollList = {} -- в addon_game_mode
+
 _G.lastDeathTimes = {}
 _G.lastHeroKillers = {}
 _G.lastHerosPlaceLastDeath = {}
@@ -77,7 +80,10 @@ function Activate()
 	CMegaDotaGameMode:InitGameMode()
 end
 
+_G.ItemKVs = {}
+
 function CMegaDotaGameMode:InitGameMode()
+	_G.ItemKVs = LoadKeyValues("scripts/npc/npc_block_items_for_troll.txt")
 	print( "10v10 Mode Loaded!" )
 
 	-- Adjust team limits
@@ -434,6 +440,8 @@ function CMegaDotaGameMode:OnEntityKilled( event )
 end
 
 LinkLuaModifier("modifier_rax_bonus", LUA_MODIFIER_MOTION_NONE)
+
+
 function CMegaDotaGameMode:OnNPCSpawned(event)
 	local spawnedUnit = EntIndexToHScript(event.entindex)
 	local tokenTrollCouter = "modifier_troll_feed_token_couter"
@@ -459,7 +467,7 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
 			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
 		end
-		GameRules:SendCustomMessage("#anti_feed_system_add_debuff_message", spawnedUnit:GetPlayerID(), 0)
+		GameRules:SendCustomMessage("#anti_feed_system_add_debuff_message", unit:GetPlayerID(), 0)
 		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = TROLL_FEED_BUFF_BASIC_TIME, addRespawnTime = addRespawnTime })
 	end
 
@@ -972,7 +980,17 @@ function CMegaDotaGameMode:OnPlayerDisconnect(data)
 	CustomGameEventManager:Send_ServerToAllClients( "change_leave_status", {leave = true, playerId = data.PlayerID} )
 end
 
+function GetBlockItemByID(id)
+	for k,v in pairs(_G.ItemKVs) do
+		if tonumber(v["ID"]) == id then
+			v["name"] = k
+			return v
+		end
+	end
+end
+
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
+
 	local orderType = filterTable.order_type
 	local playerId = filterTable.issuer_player_id_const
 	local target = filterTable.entindex_target ~= 0 and EntIndexToHScript(filterTable.entindex_target) or nil
@@ -990,6 +1008,27 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 		["item_disable_help_custom"] = true,
 		["item_mute_custom"] = true,
 	}
+	if orderType == DOTA_UNIT_ORDER_PURCHASE_ITEM then
+		if _G.trollList[playerId] then
+			local item = GetBlockItemByID(filterTable["entindex_ability"])
+			if item ~= nil then
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#you_cannot_buy_it" })
+				return false
+			end
+		end
+	end
+
+	if orderType == DOTA_UNIT_ORDER_PICKUP_ITEM then
+		if _G.trollList[playerId] then
+			local pickedItem = target:GetContainedItem()
+			if not pickedItem then return true end
+			local itemName = pickedItem:GetAbilityName()
+
+			if itemName == "item_gem" then
+				return false
+			end
+		end
+	end
 
 	if orderType == DOTA_UNIT_ORDER_DROP_ITEM or orderType == DOTA_UNIT_ORDER_EJECT_ITEM_FROM_STASH then
 		if ability and itemsToBeDestroy[ability:GetAbilityName()] then
