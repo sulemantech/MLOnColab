@@ -45,7 +45,7 @@ function EditFilterToCourier(filterTable)
 			end
 		end
 
-		if (#currentCourier > 0) and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
+		if (not _G.trollList[playerId]) and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
 			for i = 0, 20 do
 				if filterTable.entindex_ability and currentCourier:GetAbilityByIndex(i) and ability and currentCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
 					filterTable.entindex_ability = currentCourier:GetAbilityByIndex(i):GetEntityIndex()
