@@ -417,7 +417,7 @@
 	"item_voiting_troll"
 	{
 		"BaseClass"						"item_datadriven"
-		"AbilityTextureName"			"custom/banana"
+		"AbilityTextureName"			"custom/item_voiting_troll"
 		"AbilityBehavior"				"DOTA_ABILITY_BEHAVIOR_UNIT_TARGET"
 		"AbilityUnitTargetTeam"			"DOTA_UNIT_TARGET_TEAM_FRIENDLY"
 		"AbilityUnitTargetType"			"DOTA_UNIT_TARGET_HERO"
