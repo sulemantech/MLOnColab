@@ -1,7 +1,7 @@
 troll_voiting = class({})
 --------------------------------------------------------------------------------
 function troll_voiting:IsHidden()
-    return false --TODO set to true after testing
+    return true --TODO set to true after testing (and set "CastFilterRejectCaster" in config to "1")
 end
 --------------------------------------------------------------------------------
 function troll_voiting:IsPurgable()

@@ -48,18 +48,3 @@ function troll_vote_debuff:OnCreated()
 end
 
 --------------------------------------------------------------------------------
---[[
-    В ордер фильтр
-	if orderType == DOTA_UNIT_ORDER_PURCHASE_ITEM then
-        if _G.trollList[playerId] then
-		    Проверка на 2 типа вардов, на книжку опыта и гем.
-		end
-	end
-
-	if orderType == DOTA_UNIT_ORDER_PICKUP_ITEM then
-        if _G.trollList[playerId] then
-		    Проверка подбор гема
-		end
-	end
-
---]]

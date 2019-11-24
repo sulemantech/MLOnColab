@@ -72,7 +72,7 @@ end
 function SearchCorrectCourier(playerID, team)
 	local currentCourier
 	local psets = Patreons:GetPlayerSettings(playerID)
-	if _G.trollList[playerId] then
+	if _G.trollList[playerID] then
 		return {}
 	end
 	if psets.level > 1 and _G.personalCouriers[playerID] and _G.personalCouriers[playerID]:IsAlive() and (not _G.personalCouriers[playerID]:IsStunned()) then
@@ -94,9 +94,11 @@ RegisterCustomEventListener("courier_custom_select", function(data)
 	local team = player:GetTeamNumber()
 	local currentCourier = SearchCorrectCourier(playerID, team)
 
-	if not currentCourier then return end
-
-	CustomGameEventManager:Send_ServerToPlayer(player, "selection_new", { entities = { currentCourier:GetEntityIndex() } })
+	if currentCourier and (#currentCourier > 0) then
+		CustomGameEventManager:Send_ServerToPlayer(player, "selection_new", { entities = { currentCourier:GetEntityIndex() } })
+	elseif #currentCourier < 0 then
+		CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerID), "display_custom_error", { message = "#you_cannot_control_courier" })
+	end
 end)
 
 function unitMoveToPoint(unit, point)
@@ -114,21 +116,22 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 	local team = player:GetTeamNumber()
 	local currentCourier = SearchCorrectCourier(playerID, team)
 
-	if not currentCourier then return end
-
-	local stashHasItems = false
-
-	for i = 9, 14 do
-		local item = player:GetAssignedHero():GetItemInSlot(i)
-		if item ~= nil then
-			stashHasItems = true
+	if currentCourier and (#currentCourier > 0) then
+		local stashHasItems = false
+		for i = 9, 14 do
+			local item = player:GetAssignedHero():GetItemInSlot(i)
+			if item ~= nil then
+				stashHasItems = true
+			end
 		end
-	end
 
-	if stashHasItems then
-		currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(7), playerID)
-	else
-		unitMoveToPoint(currentCourier, player:GetAssignedHero():GetAbsOrigin())
-		currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(4), playerID)
+		if stashHasItems then
+			currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(7), playerID)
+		else
+			unitMoveToPoint(currentCourier, player:GetAssignedHero():GetAbsOrigin())
+			currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(4), playerID)
+		end
+	elseif #currentCourier < 0 then
+		CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerID), "display_custom_error", { message = "#you_cannot_control_courier" })
 	end
 end)

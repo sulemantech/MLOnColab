@@ -1,4 +1,4 @@
-local VOTES_NON_SUP = 6
+local VOTES_NON_SUP = 1
 local VOTES_SUP_LV_1 = 3
 local VOTES_SUP_LV_2 = 6
 local POSSIBLE_VOITES_PER_GAME = 1
