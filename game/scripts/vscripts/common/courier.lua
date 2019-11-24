@@ -94,9 +94,9 @@ RegisterCustomEventListener("courier_custom_select", function(data)
 	local team = player:GetTeamNumber()
 	local currentCourier = SearchCorrectCourier(playerID, team)
 
-	if currentCourier and (#currentCourier > 0) then
+	if currentCourier and (not _G.trollList[playerID]) then
 		CustomGameEventManager:Send_ServerToPlayer(player, "selection_new", { entities = { currentCourier:GetEntityIndex() } })
-	elseif #currentCourier < 0 then
+	elseif _G.trollList[playerID] then
 		CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerID), "display_custom_error", { message = "#you_cannot_control_courier" })
 	end
 end)
@@ -116,7 +116,7 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 	local team = player:GetTeamNumber()
 	local currentCourier = SearchCorrectCourier(playerID, team)
 
-	if currentCourier and (#currentCourier > 0) then
+	if currentCourier and (not _G.trollList[playerID]) then
 		local stashHasItems = false
 		for i = 9, 14 do
 			local item = player:GetAssignedHero():GetItemInSlot(i)
@@ -131,7 +131,7 @@ RegisterCustomEventListener("courier_custom_select_deliever_items", function(dat
 			unitMoveToPoint(currentCourier, player:GetAssignedHero():GetAbsOrigin())
 			currentCourier:CastAbilityNoTarget(currentCourier:GetAbilityByIndex(4), playerID)
 		end
-	elseif #currentCourier < 0 then
+	elseif _G.trollList[playerID] then
 		CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerID), "display_custom_error", { message = "#you_cannot_control_courier" })
 	end
 end)
