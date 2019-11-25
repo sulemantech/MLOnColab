@@ -53,6 +53,8 @@ function OnSpellStartVoite(event)
 		if votesAgainstPlayer > 0 then
 			target:RemoveModifierByName(voiteBuffName)
 		end
+
+		CustomNetTables:SetTableValue("trolls_with_voite", tostring(target:GetPlayerID()), {isTroll = true})
 		target:AddNewModifier(caster, ability, "troll_vote_debuff", { duration = -1 })
 		GameRules:SendCustomMessageToTeam("#troll_voting_final", caster:GetTeamNumber(), target:GetPlayerID(), 0)
 	else
