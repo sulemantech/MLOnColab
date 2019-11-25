@@ -44,17 +44,24 @@ function OnSpellStartVoite(event)
 
 	local ability = event.ability
 
+
 	if (votesAgainstPlayer + currentPlayersVoice) >= VOICES_FOR_PUNISHMENT then
 		if votesAgainstPlayer > 0 then
 			target:RemoveModifierByName(voiteBuffName)
 		end
 		target:AddNewModifier(caster, ability, "troll_vote_debuff", { duration = -1 })
-	elseif votesAgainstPlayer > 0 then
-		target:SetModifierStackCount(voiteBuffName, caster, votesAgainstPlayer + currentPlayersVoice)
+		GameRules:SendCustomMessageToTeam("#troll_voting_final", caster:GetTeamNumber(),target:GetPlayerID(), 0)
 	else
-		target:AddNewModifier(caster, ability, voiteBuffName, { duration = -1 })
-		target:SetModifierStackCount(voiteBuffName, caster, currentPlayersVoice)
+		if votesAgainstPlayer > 0 then
+			target:SetModifierStackCount(voiteBuffName, caster, votesAgainstPlayer + currentPlayersVoice)
+		else
+			GameRules:SendCustomMessageToTeam("#start_troll_voting_1", caster:GetTeamNumber(),caster:GetPlayerID(), 0)
+			GameRules:SendCustomMessageToTeam("#start_troll_voting_2", caster:GetTeamNumber(),target:GetPlayerID(), 0)
+			target:AddNewModifier(caster, ability, voiteBuffName, { duration = -1 })
+			target:SetModifierStackCount(voiteBuffName, caster, currentPlayersVoice)
+		end
 	end
 
+	EmitSoundOn("Hero_WinterWyvern.ArcticBurn.Cast", caster)
 	ability:RemoveSelf()
 end

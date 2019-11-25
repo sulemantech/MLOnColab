@@ -56,6 +56,7 @@ _G.fastItemsWithCooldown = {
 }
 _G.fastItemsWithoutCooldown =
 {
+	["item_voiting_troll"] = true,
 	--["item_banhammer"] = true, When teleporting, you can not change the size of the stack in the store.
 }
 
@@ -66,7 +67,6 @@ end
 
 function Precache( context )
 	PrecacheResource( "soundfile", "soundevents/custom_soundboard_soundevents.vsndevts", context )
-	
 	local heroeskv = LoadKeyValues("scripts/heroes.txt")
 	for hero, _ in pairs(heroeskv) do
 		PrecacheResource( "soundfile", "soundevents/voscripts/game_sounds_vo_"..string.sub(hero,15)..".vsndevts", context )
@@ -467,7 +467,7 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 		if addRespawnTime + normalRespawnTime < TROLL_FEED_MIN_RESPAWN_TIME then
 			addRespawnTime = TROLL_FEED_MIN_RESPAWN_TIME - normalRespawnTime
 		end
-		GameRules:SendCustomMessage("#anti_feed_system_add_debuff_message", unit:GetPlayerID(), 0)
+		GameRules:SendCustomMessage("#anti_feed_system_add_debuff_message", spawnedUnit:GetPlayerID(), 0)
 		spawnedUnit:AddNewModifier(spawnedUnit, nil, "modifier_troll_debuff_stop_feed", { duration = TROLL_FEED_BUFF_BASIC_TIME, addRespawnTime = addRespawnTime })
 	end
 
@@ -912,12 +912,6 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 			end
 		end
 
-		if (filterTable["item_parent_entindex_const"] > 0) and hItem:GetPurchaser() and not hItem:GetPurchaser():CheckPersonalCooldown(itemName) then
-			hItem:GetPurchaser():ModifyGold(hItem:GetCost(), false, 0)
-			UTIL_Remove(hItem)
-			return false
-		end
-
 		if _G.fastItemsWithCooldown[itemName] then
 			local buyer = hItem:GetPurchaser()
 			local plyID = buyer:GetPlayerID()
@@ -962,6 +956,12 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(plyID), "display_custom_error", { message = "#dota_hud_error_cant_purchase_inventory_full" })
 				return false
 			end
+		end
+
+		if (filterTable["item_parent_entindex_const"] > 0) and hItem:GetPurchaser() and not hItem:GetPurchaser():CheckPersonalCooldown(itemName) then
+			hItem:GetPurchaser():ModifyGold(hItem:GetCost(), false, 0)
+			UTIL_Remove(hItem)
+			return false
 		end
 	end
 

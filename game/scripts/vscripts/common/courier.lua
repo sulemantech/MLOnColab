@@ -43,17 +43,17 @@ function EditFilterToCourier(filterTable)
 					end
 				end
 			end
-		end
 
-		if (not _G.trollList[playerId]) and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
-			for i = 0, 20 do
-				if filterTable.entindex_ability and currentCourier:GetAbilityByIndex(i) and ability and currentCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
-					filterTable.entindex_ability = currentCourier:GetAbilityByIndex(i):GetEntityIndex()
+			if (not _G.trollList[playerId]) and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
+				for i = 0, 20 do
+					if filterTable.entindex_ability and currentCourier:GetAbilityByIndex(i) and ability and currentCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
+						filterTable.entindex_ability = currentCourier:GetAbilityByIndex(i):GetEntityIndex()
+					end
 				end
-			end
 
-			local newFocus = { currentCourier:GetEntityIndex() }
-			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_courier_update", { newCourier = newFocus, removeCourier = { unitEntityIndex } })
+				local newFocus = { currentCourier:GetEntityIndex() }
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_courier_update", { newCourier = newFocus, removeCourier = { unitEntityIndex } })
+			end
 		end
 	end
 
