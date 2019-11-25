@@ -3,7 +3,7 @@ local infinityCooldown = 999999
 
 _G.itemsCooldownForPlayer = {
 	["item_tome_of_knowledge"] = 300,
-	["item_voiting_troll"] = 0,
+	["item_voiting_troll"] = infinityCooldown,
 }
 
 function CDOTA_BaseNPC:CheckPersonalCooldown(itemName)
