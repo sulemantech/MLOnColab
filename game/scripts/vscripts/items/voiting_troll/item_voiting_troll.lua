@@ -14,6 +14,11 @@ function OnSpellStartVoite(event)
 	local caster = event.caster
 	local playerID = caster:GetPlayerID()
 
+	if Patreons:GetPlayerSettings(target:GetPlayerID()).level > 1 then
+		CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerID), "display_custom_error", { message = "#cannot_voite_against_high_tier_patreons" })
+		return
+	end
+
 	if _G.playersVoices[playerID] and _G.playersVoices[playerID] >= POSSIBLE_VOITES_PER_GAME then
 		CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerID), "display_custom_error", { message = "#already_voiting_against_troll" })
 		return
@@ -30,7 +35,7 @@ function OnSpellStartVoite(event)
 	local votesAgainstPlayer = 0
 
 	if target:HasModifier(voiteBuffName) then
-		votesAgainstPlayer = target:GetModifierStackCount(voiteBuffName, caster)
+		votesAgainstPlayer = target:GetModifierStackCount(voiteBuffName, nil)
 	end
 
 	local psets = Patreons:GetPlayerSettings(playerID)
@@ -44,24 +49,22 @@ function OnSpellStartVoite(event)
 
 	local ability = event.ability
 
-
 	if (votesAgainstPlayer + currentPlayersVoice) >= VOICES_FOR_PUNISHMENT then
 		if votesAgainstPlayer > 0 then
 			target:RemoveModifierByName(voiteBuffName)
 		end
 		target:AddNewModifier(caster, ability, "troll_vote_debuff", { duration = -1 })
-		GameRules:SendCustomMessageToTeam("#troll_voting_final", caster:GetTeamNumber(),target:GetPlayerID(), 0)
+		GameRules:SendCustomMessageToTeam("#troll_voting_final", caster:GetTeamNumber(), target:GetPlayerID(), 0)
 	else
 		if votesAgainstPlayer > 0 then
-			target:SetModifierStackCount(voiteBuffName, caster, votesAgainstPlayer + currentPlayersVoice)
+			target:SetModifierStackCount(voiteBuffName, nil, (votesAgainstPlayer + currentPlayersVoice))
 		else
-			GameRules:SendCustomMessageToTeam("#start_troll_voting_1", caster:GetTeamNumber(),caster:GetPlayerID(), 0)
-			GameRules:SendCustomMessageToTeam("#start_troll_voting_2", caster:GetTeamNumber(),target:GetPlayerID(), 0)
+			GameRules:SendCustomMessageToTeam("#start_troll_voting_1", caster:GetTeamNumber(), caster:GetPlayerID(), 0)
+			GameRules:SendCustomMessageToTeam("#start_troll_voting_2", caster:GetTeamNumber(), target:GetPlayerID(), 0)
 			target:AddNewModifier(caster, ability, voiteBuffName, { duration = -1 })
 			target:SetModifierStackCount(voiteBuffName, caster, currentPlayersVoice)
 		end
 	end
 
-	EmitSoundOn("Hero_WinterWyvern.ArcticBurn.Cast", caster)
 	ability:RemoveSelf()
 end
