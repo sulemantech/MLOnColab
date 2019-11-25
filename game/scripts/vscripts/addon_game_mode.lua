@@ -1023,8 +1023,14 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 			local pickedItem = target:GetContainedItem()
 			if not pickedItem then return true end
 			local itemName = pickedItem:GetAbilityName()
-
-			if itemName == "item_gem" then
+			local blockedItemToPickUpTroll = {
+				["item_gem"] = true,
+				["item_aegis"] = true,
+				["item_refresher_shard"] = true,
+				["item_cheese"] = true,
+				["item_ultimate_scepter_2"] = true,
+			}
+			if blockedItemToPickUpTroll[itemName] then
 				return false
 			end
 		end
