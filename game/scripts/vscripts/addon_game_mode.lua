@@ -39,6 +39,7 @@ LinkLuaModifier("modifier_troll_debuff_stop_feed", 'anti_feed_system/modifier_tr
 _G.newStats = newStats or {}
 _G.personalCouriers = {}
 _G.mainTeamCouriers = {}
+_G.gameIsStart = false
 _G.trollList = {}
 
 _G.lastDeathTimes = {}
@@ -520,6 +521,43 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 			local team = spawnedUnit:GetTeamNumber()
 			CreatePrivateCourier(playerId, spawnedUnit, courier_spawn[team]:GetAbsOrigin())
 		end
+		local timeToBaseGPM = 0.7
+		local baseGoldPerTick = 1
+
+		local timeAdditionalGPM = 60
+		local goldPerLevelGpmInMinute = 2
+
+		Timers:CreateTimer("base_gpm_custom_timer", {
+			useGameTime = true,
+			endTime = 0,
+			callback = function()
+				if _G.gameIsStart then
+					for _, hero in pairs(_G.tableRadiantHeroes) do
+						hero:ModifyGold(baseGoldPerTick, false, 0)
+					end
+					for _, hero in pairs(_G.tableDireHeroes) do
+						hero:ModifyGold(baseGoldPerTick, false, 0)
+					end
+				end
+				return timeToBaseGPM
+			end
+		})
+		Timers:CreateTimer("additional_gpm_custom_timer", {
+			useGameTime = true,
+			endTime = 0,
+			callback = function()
+				if _G.gameIsStart then
+					for _, hero in pairs(_G.tableRadiantHeroes) do
+						hero:ModifyGold(hero:GetLevel() * goldPerLevelGpmInMinute, false, 0)
+					end
+					for _, hero in pairs(_G.tableDireHeroes) do
+						hero:ModifyGold(hero:GetLevel() * goldPerLevelGpmInMinute, false, 0)
+					end
+				end
+				return timeAdditionalGPM
+			end
+		})
+
 	end
 end
 
@@ -746,6 +784,9 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
         end
 
 		if game_start then
+			Timers:CreateTimer(90, function()
+				_G.gameIsStart = true
+			end)
 			local courier_spawn = {}
 			courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
 			courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
@@ -1160,10 +1201,15 @@ end)
 
 votimer = {}
 voused = {}
+vousedcol = {}
 SelectVO = function(keys)
 	local psets = Patreons:GetPlayerSettings(keys.PlayerID)
-	if voused[keys.PlayerID] ~= nil and psets.level == 0 then return end
+	if voused[keys.PlayerID] ~= nil and psets.level == 0 then
+		CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(keys.PlayerID), "display_custom_error", { message = "#wheel_cooldown" })
+		return
+	end
 	voused[keys.PlayerID] = true
+	Timers:CreateTimer( 240, function() voused[keys.PlayerID] = nil end)
 	print(keys.num)
 	local heroes = {
 		"abaddon",
@@ -2738,19 +2784,24 @@ SelectVO = function(keys)
 				"zuus_zuus_rival_13",
 			}
 		}
+		if vousedcol[keys.PlayerID] == nil then vousedcol[keys.PlayerID] = 0 end
 		if votimer[keys.PlayerID] ~= nil then
-			if GameRules:GetGameTime() - votimer[keys.PlayerID] > 5 then
+			if GameRules:GetGameTime() - votimer[keys.PlayerID] > 5 + vousedcol[keys.PlayerID] then
 				local chat = LoadKeyValues("scripts/hero_chat_wheel_english.txt")
 				EmitAnnouncerSound(heroesvo[selectedid][selectedid2])
 				--GameRules:SendCustomMessage("<font color='#70EA72'>".."test".."</font>",-1,0)
 				Say(PlayerResource:GetPlayer(keys.PlayerID), chat["dota_chatwheel_message_"..selectedstr], false)
 				votimer[keys.PlayerID] = GameRules:GetGameTime()
+				vousedcol[keys.PlayerID] = vousedcol[keys.PlayerID] + 1
+			else
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(keys.PlayerID), "display_custom_error", { message = "#wheel_cooldown" })
 			end
 		else
 			local chat = LoadKeyValues("scripts/hero_chat_wheel_english.txt")
 			EmitAnnouncerSound(heroesvo[selectedid][selectedid2])
 			Say(PlayerResource:GetPlayer(keys.PlayerID), chat["dota_chatwheel_message_"..selectedstr], false)
 			votimer[keys.PlayerID] = GameRules:GetGameTime()
+			vousedcol[keys.PlayerID] = vousedcol[keys.PlayerID] + 1
 		end
 	end
 end
