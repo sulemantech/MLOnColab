@@ -19,6 +19,8 @@ function EditFilterToCourier(filterTable)
 	local playerId = filterTable.issuer_player_id_const
 
 	if playerId < 0 then return filterTable end
+	if not PlayerResource:GetPlayer(playerId):GetAssignedHero() then return filterTable end
+
 	local hasCourierInUnitsTable = false
 	for _, unitEntityIndex in pairs(filterTable.units) do
 		unit = EntIndexToHScript(unitEntityIndex)
@@ -35,7 +37,6 @@ function EditFilterToCourier(filterTable)
 
 	for _, unitEntityIndex in pairs(filterTable.units) do
 		unit = EntIndexToHScript(unitEntityIndex)
-		if unit:IsCourier() and currentCourier and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
 
 		if unit:IsCourier() then
 			for i, x in pairs(filterTable.units) do
@@ -44,23 +45,22 @@ function EditFilterToCourier(filterTable)
 						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = { unit:GetEntityIndex() } })
 						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#you_cannot_control_courier" })
 						filterTable.units[i] = currentCourier
-					else
+					elseif currentCourier then
 						filterTable.units[i] = currentCourier:GetEntityIndex()
 					end
 				end
 			end
 
-			if (not _G.trollList[playerId]) and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
+			if (not _G.trollList[playerId]) and currentCourier and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
 				for i = 0, 20 do
 					if filterTable.entindex_ability and currentCourier:GetAbilityByIndex(i) and ability and currentCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
 						filterTable.entindex_ability = currentCourier:GetAbilityByIndex(i):GetEntityIndex()
 					end
 				end
+
+				local newFocus = { currentCourier:GetEntityIndex() }
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_courier_update", { newCourier = newFocus, removeCourier = { unitEntityIndex } })
 			end
-
-			local newFocus = { currentCourier:GetEntityIndex() }
-
-			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_courier_update", { newCourier = newFocus, removeCourier = { unitEntityIndex } })
 		end
 	end
 
