@@ -1007,12 +1007,6 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 			end
 		end
 
-		if (filterTable["item_parent_entindex_const"] > 0) and hItem:GetPurchaser() and not hItem:GetPurchaser():CheckPersonalCooldown(itemName) then
-			hItem:GetPurchaser():ModifyGold(hItem:GetCost(), false, 0)
-			UTIL_Remove(hItem)
-			return false
-		end
-
 		if  hItem:GetPurchaser() and (itemName == "item_relic")then
 			local buyer = hItem:GetPurchaser()
 			local plyID = buyer:GetPlayerID()
