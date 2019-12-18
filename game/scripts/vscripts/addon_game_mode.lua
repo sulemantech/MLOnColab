@@ -511,16 +511,16 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 			end, 2/30)
 		end
 
-		local psets = Patreons:GetPlayerSettings(playerId)
+		--local psets = Patreons:GetPlayerSettings(playerId)
 
-		if psets.level > 1 and _G.personalCouriers[playerId] == nil then
-			local courier_spawn = {
-				[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant"),
-				[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire"),
-			}
-			local team = spawnedUnit:GetTeamNumber()
-			CreatePrivateCourier(playerId, spawnedUnit, courier_spawn[team]:GetAbsOrigin())
-		end
+		--if psets.level > 1 and _G.personalCouriers[playerId] == nil then
+		--	local courier_spawn = {
+		--		[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant"),
+		--		[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire"),
+		--	}
+		--	local team = spawnedUnit:GetTeamNumber()
+		--	CreatePrivateCourier(playerId, spawnedUnit, courier_spawn[team]:GetAbsOrigin())
+		--end
 	end
 end
 
