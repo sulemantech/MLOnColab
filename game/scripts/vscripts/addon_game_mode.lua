@@ -498,6 +498,19 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 		}
 
 		newStats[player_id][name] = newStats[player_id][name] + 1
+		local wardsName = {
+			["npc_dota_sentry_wards"] = "item_ward_sentry",
+			["npc_dota_observer_wards"] = "item_ward_observer",
+		}
+		Timers:CreateTimer(0.04, function()
+			if HeroHasWards(owner:GetAssignedHero(), wardsName[name]) then
+				ReloadTimerHoldingCheckerForPlayer(player_id)
+			else
+				RemoveTimerHoldingCheckerForPlayer(player_id)
+			end
+			return nil
+		end
+		)
 	end
 
 	if spawnedUnit:IsRealHero() then
@@ -1064,7 +1077,6 @@ function GetBlockItemByID(id)
 end
 
 function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
-
 	local orderType = filterTable.order_type
 	local playerId = filterTable.issuer_player_id_const
 	local target = filterTable.entindex_target ~= 0 and EntIndexToHScript(filterTable.entindex_target) or nil
@@ -1083,11 +1095,20 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 		["item_mute_custom"] = true,
 	}
 	if orderType == DOTA_UNIT_ORDER_PURCHASE_ITEM then
+		local entIndexAbility = filterTable["entindex_ability"]
 		if _G.trollList[playerId] then
-			local item = GetBlockItemByID(filterTable["entindex_ability"])
+			local item = GetBlockItemByID(entIndexAbility)
 			if item ~= nil then
 				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#you_cannot_buy_it" })
 				return false
+			end
+		end
+		if ItemIsWard(entIndexAbility) then
+			if _G.playerIsBlockForWards[playerId] then
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#you_cannot_buy_it" })
+				return false
+			elseif not _G.playerHasTimerWards[playerId] then
+				StartTimerHoldingCheckerForPlayer(playerId)
 			end
 		end
 	end
@@ -1112,10 +1133,10 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	end
 
 	if orderType == DOTA_UNIT_ORDER_PICKUP_ITEM then
+		local pickedItem = target:GetContainedItem()
+		if not pickedItem then return true end
+		local itemName = pickedItem:GetAbilityName()
 		if _G.trollList[playerId] then
-			local pickedItem = target:GetContainedItem()
-			if not pickedItem then return true end
-			local itemName = pickedItem:GetAbilityName()
 			local blockedItemToPickUpTroll = {
 				["item_gem"] = true,
 				["item_aegis"] = true,
@@ -1125,6 +1146,15 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 			}
 			if blockedItemToPickUpTroll[itemName] then
 				return false
+			end
+		end
+
+		if _G.wardsList[itemName] then
+			if _G.playerIsBlockForWards[playerId] then
+				CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#cannotpickupit" })
+				return false
+			elseif not _G.playerHasTimerWards[playerId] then
+				StartTimerHoldingCheckerForPlayer(playerId)
 			end
 		end
 	end
