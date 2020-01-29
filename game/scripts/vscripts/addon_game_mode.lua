@@ -1015,7 +1015,8 @@ function CMegaDotaGameMode:ItemAddedToInventoryFilter( filterTable )
 				end
 				local unique_key_cd = itemName .. "_" .. purchaser:GetEntityIndex()
 				if _G.lastTimeBuyItemWithCooldown[unique_key_cd] and (_G.itemsCooldownForPlayer[itemName] and (GameRules:GetGameTime() - _G.lastTimeBuyItemWithCooldown[unique_key_cd]) < _G.itemsCooldownForPlayer[itemName]) then
-					Timers:CreateTimer(1, function()
+					MessageToPlayerItemCooldown(itemName, prshID)
+					Timers:CreateTimer(0.08, function()
 						UTIL_Remove(hItem)
 					end)
 					return false
