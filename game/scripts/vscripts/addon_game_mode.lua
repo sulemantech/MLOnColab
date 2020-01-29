@@ -30,6 +30,7 @@ require("gpm_lib")
 
 WebApi.customGame = "Dota12v12"
 
+LinkLuaModifier("modifier_dummy_inventory", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_patreon_courier", LUA_MODIFIER_MOTION_NONE)
 LinkLuaModifier("modifier_silencer_new_int_steal", LUA_MODIFIER_MOTION_NONE)
@@ -539,6 +540,19 @@ function CMegaDotaGameMode:OnNPCSpawned(event)
 		end
 
 		--local psets = Patreons:GetPlayerSettings(playerId)
+
+		if not PlayerResource:GetPlayer(playerId).dummyInventory then
+			local team = spawnedUnit:GetTeamNumber()
+			local startPointSpawn = {
+				[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant"),
+				[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire"),
+			}
+			startPointSpawn = startPointSpawn[team]:GetAbsOrigin() + (RandomFloat(100, 100))
+			local dInventory = CreateUnitByName("npc_dummy_inventory", startPointSpawn, true, spawnedUnit, spawnedUnit, team)
+			dInventory:SetControllableByPlayer(playerId, true)
+			dInventory:AddNewModifier(dInventory, nil, "modifier_dummy_inventory", {duration = -1})
+			PlayerResource:GetPlayer(playerId).dummyInventory = dInventory
+		end
 
 		--if psets.level > 1 and _G.personalCouriers[playerId] == nil then
 		--	local courier_spawn = {

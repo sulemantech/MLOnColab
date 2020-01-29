@@ -25,6 +25,24 @@ function DropItem(data)
 			CustomGameEventManager:Send_ServerToPlayer( PlayerResource:GetPlayer( i ), "neutral_item_dropped", { item = data.item } )
 		end
 	end
+	Timers:CreateTimer(15,function() -- !!! You need put here time from function NeutralItemDropped from neutral_items.js - Shelude
+		if not item.taked then
+			local hero =  player:GetAssignedHero()
+			local shop = SearchCorrectNeutralShopByTeam(hero:GetTeamNumber())
+			if shop then
+				local dummyInventory = player.dummyInventory
+				if not dummyInventory then return end
+				UTIL_Remove(item:GetContainer())
+				dummyInventory:AddItem(item)
+				ExecuteOrderFromTable({
+					UnitIndex = dummyInventory:entindex(),
+					OrderType = 37,
+					AbilityIndex = item:entindex(),
+				})
+			end
+		end
+		return nil
+	end)
 end
 
 function NotificationToAllPlayerOnTeam(data)
@@ -40,6 +58,7 @@ RegisterCustomEventListener( "neutral_item_keep", function( data )
 	local hero = PlayerResource:GetSelectedHeroEntity( data.PlayerID )
 	local freeSlot = DoesHeroHasFreeSlot(hero)
 	if freeSlot then
+		item.taked = true
 		hero:AddItem(item)
 		NotificationToAllPlayerOnTeam(data)
 	else
@@ -57,6 +76,7 @@ RegisterCustomEventListener( "neutral_item_take", function( data )
 		local container = item:GetContainer()
 		UTIL_Remove( container )
 		item.neutralDropInBase = false
+		item.taked = true
 		hero:AddItem( item )
 		NotificationToAllPlayerOnTeam(data)
 	else
@@ -67,3 +87,13 @@ end )
 RegisterCustomEventListener( "neutral_item_drop", function( data )
 	DropItem(data)
 end )
+
+function SearchCorrectNeutralShopByTeam(team)
+	local neutralShops = Entities:FindAllByClassname('ent_dota_neutral_item_stash')
+	for _, focusShop in pairs(neutralShops) do
+		if focusShop:GetTeamNumber() == team then
+			return focusShop
+		end
+	end
+	return false
+end
