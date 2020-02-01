@@ -1148,6 +1148,7 @@ function CMegaDotaGameMode:ExecuteOrderFilter(filterTable)
 	end
 
 	if orderType == DOTA_UNIT_ORDER_PICKUP_ITEM then
+		if not target then return true end
 		local pickedItem = target:GetContainedItem()
 		if not pickedItem then return true end
 		local itemName = pickedItem:GetAbilityName()
