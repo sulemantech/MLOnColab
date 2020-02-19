@@ -38,7 +38,7 @@
 
 		<Panel id="PatreonsGamePerkMenu">
 			<Panel class="PatreonsGamePerkMenuHeadGrid">
-				<Label class="PatreonsGamePerkMenuHeadText" text="CHOOSE  YOUR  PERK"/>
+				<Label class="PatreonsGamePerkMenuHeadText" text="#patreons_perk_hide_choose"/>
 			</Panel>
 			<Panel id="PatreonsGamePerksList"/>
 		</Panel>
