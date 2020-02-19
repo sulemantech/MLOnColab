@@ -11,6 +11,10 @@ function patreon_perk_bonus_int_10:IsPurgable()
 	return false
 end
 --------------------------------------------------------------------------------
+function patreon_perk_bonus_int_10:RemoveOnDeath()
+	return false
+end
+--------------------------------------------------------------------------------
 
 function patreon_perk_bonus_int_10:DeclareFunctions()
 	local funcs = {

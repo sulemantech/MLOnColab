@@ -11,6 +11,10 @@ function patreon_perk_bonus_movespeed_10:IsPurgable()
 	return false
 end
 --------------------------------------------------------------------------------
+function patreon_perk_bonus_movespeed_10:RemoveOnDeath()
+	return false
+end
+--------------------------------------------------------------------------------
 
 function patreon_perk_bonus_movespeed_10:DeclareFunctions()
 	local funcs = {

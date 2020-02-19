@@ -11,6 +11,10 @@ function patreon_perk_hp_regen_3:IsPurgable()
 	return false
 end
 --------------------------------------------------------------------------------
+function patreon_perk_hp_regen_3:RemoveOnDeath()
+	return false
+end
+--------------------------------------------------------------------------------
 
 function patreon_perk_hp_regen_3:DeclareFunctions()
 	local funcs = {

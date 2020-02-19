@@ -11,6 +11,10 @@ function patreon_perk_bonus_all_stats_7:IsPurgable()
 	return false
 end
 --------------------------------------------------------------------------------
+function patreon_perk_bonus_all_stats_7:RemoveOnDeath()
+	return false
+end
+--------------------------------------------------------------------------------
 
 function patreon_perk_bonus_all_stats_7:DeclareFunctions()
 	local funcs = {
