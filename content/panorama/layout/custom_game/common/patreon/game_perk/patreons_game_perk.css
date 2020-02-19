@@ -23,7 +23,7 @@
 	width: 52px;
 	height: 60px;
 	margin-bottom: 9.25%;
-	margin-left: -35.92%;
+	margin-left: -35.95%;
 	align: center bottom;
 	visibility: collapse;
 }
@@ -33,7 +33,7 @@
 }
 
 #PatreonsGamePerkMenu {
-	width: 450px;
+	width: 650px;
 	height: 300px;
 	margin-bottom: 35%;
 	align: center bottom;
@@ -67,9 +67,9 @@
 	text-shadow: 1px -1px 2px 3.0 #000000FF;
 }
 
-#PatreonsGamePerksList {
-	width: 450px;
-	flow-children: right-wrap;
+#PatreonsGamePerksTierList {
+	width: 650px;
+	flow-children: right;
 	overflow: squish scroll;
 	horizontal-align: center;
 }
@@ -80,8 +80,8 @@
 	border-width: 2px;
 	border-style: solid;
 	border-color: rgb(80,80,80);
-	margin-bottom: 15px;
-	margin-left: 20px;
+	margin-top: 13px;
+	margin-left: 12px;
 	width: 120px;
 	height: 127px;
 	flow-children: down;
@@ -92,7 +92,7 @@
 	width: 60px;
 	height: 60px;
 	horizontal-align: center;
-	border-radius: 100%;
+	border-radius: 2%;
 }
 
 .GamePerkText {
@@ -114,7 +114,8 @@
 }
 
 .GamePerkImageNotAvailable {
-	wash-color: rgb(209, 0, 0);
+	saturation: 0.0;
+	brightness: 0.75;
 }
 
 .GamePerkImageHover:hover {
@@ -129,7 +130,7 @@
 	background-position: 4px 4px;
 	background-repeat: no-repeat;
 	margin-bottom: 61.2%;
-	margin-left: 23%;
+	margin-left: 25.5%;
 	background-color: rgb(40, 40, 40);
 	border-radius: 100%;
 	border-style: solid;
@@ -145,3 +146,51 @@
 	horizontal-align: center;
 	vertical-align: middle;
 }
+
+.PatreonGamePerksTier {
+	margin-left: 19px;
+	margin-bottom: 5px;
+	width: 294px;
+	height: fit-children;
+	flow-children: down;
+
+	background-color: gradient( linear, 0% 0%, 0% 100%, from( #252525 ), to( #101010 ) );
+}
+
+.PatreonGamePerksTierHeader {
+	background-color: rgb(46, 51, 64);
+	border-radius: 2px;
+	border-width: 2px;
+	border-style: solid;
+	border-color: rgb(117, 117, 117);
+	margin-top: 2px;
+	width: 287px;
+	height: 38px;
+	horizontal-align: center;
+}
+
+.PatreonGamePerksTierHeaderTextMain {
+	horizontal-align: center;
+	vertical-align: center;
+	font-size: 21px;
+	text-shadow: 1px -1px 2px 3.0 #000000FF;
+}
+
+.PatreonGamePerksTierHeaderTextTier1 {
+	color: rgb(70, 156, 148);
+}
+
+.PatreonGamePerksTierHeaderTextTier2 {
+	color: rgb(43, 194, 118);
+}
+
+.PerkPanelListForTier {
+	horizontal-align: center;
+	border-radius: 2px;
+	border-width: 2px;
+	border-style: solid;
+	width: 287px;
+	height: fit-children;
+	flow-children: right-wrap;
+}
+

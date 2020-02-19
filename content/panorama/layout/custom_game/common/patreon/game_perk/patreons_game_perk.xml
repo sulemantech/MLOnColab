@@ -40,7 +40,7 @@
 			<Panel class="PatreonsGamePerkMenuHeadGrid">
 				<Label class="PatreonsGamePerkMenuHeadText" text="#patreons_perk_hide_choose"/>
 			</Panel>
-			<Panel id="PatreonsGamePerksList"/>
+			<Panel id="PatreonsGamePerksTierList"/>
 		</Panel>
 
 		<Button id="ClosePatreonsPerks" onactivate="HidePatreonsGamePerks()" onmouseover="DOTAShowTextTooltip(#close_patreons_game_perks_menu)" onmouseout="DOTAHideTextTooltip()"/>

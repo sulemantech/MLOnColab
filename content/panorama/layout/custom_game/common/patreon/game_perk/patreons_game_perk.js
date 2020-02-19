@@ -1,3 +1,4 @@
+var patreons_levels = 2;
 var patreons_game_perks = {
 "patreon_perk_mp_regen_1": 1,
 "patreon_perk_mp_regen_3": 2,
@@ -80,28 +81,73 @@ function CreatePatreonsGamePerks(){
 		$("#PatreonGamePerkButtonOption").visible = true;
 		$("#PatreonGamePerkButtonPanel").visible = true;
 
-		for (var key in patreons_game_perks) {
-			var perkPanel = $.CreatePanel("Panel", $("#PatreonsGamePerksList"), "");
-			perkPanel.AddClass("GamePerkForPatreon");
+		for (var x = 0; x < patreons_levels; x++) {
+			var tier = x+1
+			var patreonGamePerksTier = $.CreatePanel("Panel", $("#PatreonsGamePerksTierList"), "");
+			patreonGamePerksTier.AddClass("PatreonGamePerksTier");
 
-			var perkIconImage = $.CreatePanel("Image", perkPanel, "qwe");
-			perkIconImage.AddClass("GamePerkImage");
-			perkIconImage.SetImage("file://{resources}/layout/custom_game/common/patreon/game_perk/icons/"+key+".png")
-			perkIconImage.icon = key
+			var patreonGamePerksTierHeader = $.CreatePanel("Panel", patreonGamePerksTier, "");
+			patreonGamePerksTierHeader.AddClass("PatreonGamePerksTierHeader");
 
-			var perkLabelText = $.CreatePanel("Label", perkPanel, "");
-			perkLabelText.AddClass("GamePerkText");
-			perkLabelText.text = $.Localize("#patreonperktooltip_"+key);
+			var patreonGamePerksTierHeaderText = $.CreatePanel("Label", patreonGamePerksTierHeader, "");
+			patreonGamePerksTierHeaderText.AddClass("PatreonGamePerksTierHeaderTextMain");
+			patreonGamePerksTierHeaderText.AddClass("PatreonGamePerksTierHeaderTextTier"+tier);
+			patreonGamePerksTierHeaderText.text = $.Localize("#patreon_game_perk_tolltip_tier_"+tier);
 
-			if (patreons_game_perks[key] > patreonLevel){
-				perkIconImage.AddClass("GamePerkImageNotAvailable");
-				perkLabelText.AddClass("GamePerkTextNotAvailable");
-				UpdateBlockPatreonsPerk(perkIconImage);
-			}else{
-				perkIconImage.AddClass("GamePerkImageHover");
-				SetPatreonsPerkButtonAction(perkIconImage, key);
+			var perkPanelListForTier = $.CreatePanel("Panel", patreonGamePerksTier, "");
+            perkPanelListForTier.AddClass("PerkPanelListForTier");
+
+			for (var key in patreons_game_perks) {
+				if (patreons_game_perks[key] == tier){
+					var perkPanel = $.CreatePanel("Panel", perkPanelListForTier, "");
+					perkPanel.AddClass("GamePerkForPatreon");
+
+					var perkIconImage = $.CreatePanel("Image", perkPanel, "");
+					perkIconImage.AddClass("GamePerkImage");
+					perkIconImage.SetImage("file://{resources}/layout/custom_game/common/patreon/game_perk/icons/"+key+".png")
+					perkIconImage.icon = key
+
+					var perkLabelText = $.CreatePanel("Label", perkPanel, "");
+					perkLabelText.AddClass("GamePerkText");
+					perkLabelText.text = $.Localize("#patreonperktooltip_"+key);
+
+					if (patreons_game_perks[key] == patreonLevel){
+						perkIconImage.AddClass("GamePerkImageHover");
+						SetPatreonsPerkButtonAction(perkIconImage, key);
+					}else{
+						perkIconImage.AddClass("GamePerkImageNotAvailable");
+						perkLabelText.AddClass("GamePerkTextNotAvailable");
+						UpdateBlockPatreonsPerk(perkIconImage);
+					}
+				}
 			}
-		};
+		}
+
+
+
+
+//		for (var key in patreons_game_perks) {
+//			var perkPanel = $.CreatePanel("Panel", $("#PatreonsGamePerksList"), "");
+//			perkPanel.AddClass("GamePerkForPatreon");
+//
+//			var perkIconImage = $.CreatePanel("Image", perkPanel, "qwe");
+//			perkIconImage.AddClass("GamePerkImage");
+//			perkIconImage.SetImage("file://{resources}/layout/custom_game/common/patreon/game_perk/icons/"+key+".png")
+//			perkIconImage.icon = key
+//
+//			var perkLabelText = $.CreatePanel("Label", perkPanel, "");
+//			perkLabelText.AddClass("GamePerkText");
+//			perkLabelText.text = $.Localize("#patreonperktooltip_"+key);
+//
+//			if (patreons_game_perks[key] > patreonLevel){
+//				perkIconImage.AddClass("GamePerkImageNotAvailable");
+//				perkLabelText.AddClass("GamePerkTextNotAvailable");
+//				UpdateBlockPatreonsPerk(perkIconImage);
+//			}else{
+//				perkIconImage.AddClass("GamePerkImageHover");
+//				SetPatreonsPerkButtonAction(perkIconImage, key);
+//			}
+//		};
 	}
 }
 
