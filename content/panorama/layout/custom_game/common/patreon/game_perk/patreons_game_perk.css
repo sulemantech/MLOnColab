@@ -61,8 +61,8 @@
 .PatreonsGamePerkMenuHeadText {
 	horizontal-align: center;
 	vertical-align: center;
-	font-size: 21px;
-	color: rgb(222, 211, 11);
+	font-size: 20px;
+	color: rgb(232, 232, 63);
 	font-weight: bold;
 	text-shadow: 1px -1px 2px 3.0 #000000FF;
 }
@@ -92,14 +92,14 @@
 	width: 60px;
 	height: 60px;
 	horizontal-align: center;
-	border-radius: 2%;
+	border-radius: 10%;
 }
 
 .GamePerkText {
 	width: 120px;
 	horizontal-align: center;
 	vertical-align: center;
-	color: green;
+	color: rgb(109, 163, 111);
 	font-size: 15.5px;
 	text-overflow: clip;
 	text-align: center;
@@ -110,7 +110,7 @@
 }
 
 .GamePerkTextNotAvailable {
-	color: rgb(217, 13, 13);
+	color: rgb(122, 122, 122);
 }
 
 .GamePerkImageNotAvailable {
@@ -119,7 +119,9 @@
 }
 
 .GamePerkImageHover:hover {
-	box-shadow: inset 0 0 30px rgba(230, 230, 20, 0.7);
+	box-shadow: inset 0 0 40px rgba(220, 220, 20, 0.5);
+	brightness: 1.5;
+	saturation: 0.9;
 }
 
 #ClosePatreonsPerks{
@@ -138,6 +140,9 @@
 	border-color: rgb(166, 23, 23);
 	background-image: url("s2r://panorama/images/control_icons/x_close_png.vtex");
 	visibility: collapse;
+}
+#ClosePatreonsPerks:hover{
+	box-shadow: 0 0 4px rgb(204, 41, 41);
 }
 #SetPatreonGamePerkButton {
 	width: 38px;
@@ -177,11 +182,11 @@
 }
 
 .PatreonGamePerksTierHeaderTextTier1 {
-	color: rgb(70, 156, 148);
+	color: rgb(171, 171, 171);
 }
 
 .PatreonGamePerksTierHeaderTextTier2 {
-	color: rgb(43, 194, 118);
+	color: rgb(200, 216, 219);
 }
 
 .PerkPanelListForTier {
