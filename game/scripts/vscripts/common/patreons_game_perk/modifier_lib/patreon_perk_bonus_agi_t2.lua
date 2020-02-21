@@ -1,23 +1,23 @@
-patreon_perk_bonus_agi_10 = class({})
+patreon_perk_bonus_agi_t2 = class({})
 --------------------------------------------------------------------------------
 
-function patreon_perk_bonus_agi_10:IsHidden()
+function patreon_perk_bonus_agi_t2:IsHidden()
 	return true
 end
 
 --------------------------------------------------------------------------------
 
-function patreon_perk_bonus_agi_10:IsPurgable()
+function patreon_perk_bonus_agi_t2:IsPurgable()
 	return false
 end
 --------------------------------------------------------------------------------
 ---
-function patreon_perk_bonus_agi_10:RemoveOnDeath()
+function patreon_perk_bonus_agi_t2:RemoveOnDeath()
 	return false
 end
 --------------------------------------------------------------------------------
 
-function patreon_perk_bonus_agi_10:DeclareFunctions()
+function patreon_perk_bonus_agi_t2:DeclareFunctions()
 	local funcs = {
 		MODIFIER_PROPERTY_STATS_AGILITY_BONUS,
 	}
@@ -25,8 +25,13 @@ function patreon_perk_bonus_agi_10:DeclareFunctions()
 end
 --------------------------------------------------------------------------------
 
-function patreon_perk_bonus_agi_10:GetModifierBonusStats_Agility(params)
-    return 10
+function patreon_perk_bonus_agi_t2:GetModifierBonusStats_Agility(params)
+    return GetPerkValue(0, self, 1, 2)
 end
 
+--------------------------------------------------------------------------------
+function GetPerkValue(const, modifier, levelCounter, bonusPerLevel)
+	local heroLvl = modifier:GetParent():GetLevel()
+	return math.floor(heroLvl/levelCounter)*bonusPerLevel+const
+end
 --------------------------------------------------------------------------------

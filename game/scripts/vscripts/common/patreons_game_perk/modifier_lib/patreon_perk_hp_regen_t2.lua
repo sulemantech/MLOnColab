@@ -1,22 +1,22 @@
-patreon_perk_hp_regen_1 = class({})
+patreon_perk_hp_regen_t2 = class({})
 --------------------------------------------------------------------------------
 
-function patreon_perk_hp_regen_1:IsHidden()
+function patreon_perk_hp_regen_t2:IsHidden()
 	return true
 end
 
 --------------------------------------------------------------------------------
 
-function patreon_perk_hp_regen_1:IsPurgable()
+function patreon_perk_hp_regen_t2:IsPurgable()
 	return false
 end
 --------------------------------------------------------------------------------
-function patreon_perk_hp_regen_1:RemoveOnDeath()
+function patreon_perk_hp_regen_t2:RemoveOnDeath()
 	return false
 end
 --------------------------------------------------------------------------------
 
-function patreon_perk_hp_regen_1:DeclareFunctions()
+function patreon_perk_hp_regen_t2:DeclareFunctions()
 	local funcs = {
 		MODIFIER_PROPERTY_HEALTH_REGEN_CONSTANT,
 	}
@@ -24,8 +24,13 @@ function patreon_perk_hp_regen_1:DeclareFunctions()
 end
 --------------------------------------------------------------------------------
 
-function patreon_perk_hp_regen_1:GetModifierConstantHealthRegen(params)
-    return 1
+function patreon_perk_hp_regen_t2:GetModifierConstantHealthRegen(params)
+	return GetPerkValue(1, self, 1, 1)
 end
 
+--------------------------------------------------------------------------------
+function GetPerkValue(const, modifier, levelCounter, bonusPerLevel)
+	local heroLvl = modifier:GetParent():GetLevel()
+	return math.floor(heroLvl/levelCounter)*bonusPerLevel+const
+end
 --------------------------------------------------------------------------------

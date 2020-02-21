@@ -1,22 +1,22 @@
-patreon_perk_mp_regen_3 = class({})
+patreon_perk_mp_regen_t2 = class({})
 --------------------------------------------------------------------------------
 
-function patreon_perk_mp_regen_3:IsHidden()
+function patreon_perk_mp_regen_t2:IsHidden()
 	return true
 end
 
 --------------------------------------------------------------------------------
 
-function patreon_perk_mp_regen_3:IsPurgable()
+function patreon_perk_mp_regen_t2:IsPurgable()
 	return false
 end
 --------------------------------------------------------------------------------
-function patreon_perk_mp_regen_3:RemoveOnDeath()
+function patreon_perk_mp_regen_t2:RemoveOnDeath()
 	return false
 end
 --------------------------------------------------------------------------------
 
-function patreon_perk_mp_regen_3:DeclareFunctions()
+function patreon_perk_mp_regen_t2:DeclareFunctions()
 	local funcs = {
         MODIFIER_PROPERTY_MANA_REGEN_CONSTANT,
 	}
@@ -24,8 +24,13 @@ function patreon_perk_mp_regen_3:DeclareFunctions()
 end
 --------------------------------------------------------------------------------
 
-function patreon_perk_mp_regen_3:GetModifierConstantManaRegen(params)
-    return 3
+function patreon_perk_mp_regen_t2:GetModifierConstantManaRegen(params)
+	return GetPerkValue(2, self, 1, 0.4)
 end
 
+--------------------------------------------------------------------------------
+function GetPerkValue(const, modifier, levelCounter, bonusPerLevel)
+	local heroLvl = modifier:GetParent():GetLevel()
+	return math.floor(heroLvl/levelCounter)*bonusPerLevel+const
+end
 --------------------------------------------------------------------------------

@@ -1,21 +1,43 @@
 var patreons_levels = 2;
 var patreons_game_perks = {
-"patreon_perk_mp_regen_1": 1,
-"patreon_perk_mp_regen_3": 2,
-"patreon_perk_hp_regen_1": 1,
-"patreon_perk_hp_regen_3": 2,
-"patreon_perk_bonus_movespeed_10": 1,
-"patreon_perk_bonus_movespeed_15": 2,
-"patreon_perk_bonus_agi_10": 1,
-"patreon_perk_bonus_str_10": 1,
-"patreon_perk_bonus_int_10": 1,
-"patreon_perk_bonus_all_stats_7": 2,
+"patreon_perk_mp_regen_t1": 1,//
+"patreon_perk_mp_regen_t2": 2,//
+"patreon_perk_hp_regen_t1": 1,//
+"patreon_perk_hp_regen_t2": 2,//
+"patreon_perk_bonus_movespeed_t1": 1,//
+"patreon_perk_bonus_movespeed_t2": 2,//
+"patreon_perk_bonus_agi_t1": 1,//
+"patreon_perk_bonus_agi_t2": 2,//
+"patreon_perk_bonus_str_t1": 1,//
+"patreon_perk_bonus_str_t2": 2,//
+"patreon_perk_bonus_int_t1": 1,//
+"patreon_perk_bonus_int_t2": 2,//
+"patreon_perk_bonus_all_stats_t1": 1,//
+"patreon_perk_bonus_all_stats_t2": 2,//
+"patreon_perk_attack_range_t1": 1,
+"patreon_perk_attack_range_t2": 2,
+"patreon_perk_bonus_hp_pct_t1": 1,
+"patreon_perk_bonus_hp_pct_t2": 2,
+"patreon_perk_cast_range_t1": 1,
+"patreon_perk_cast_range_t2": 2,
+"patreon_perk_cooldown_reduction_t1": 1,
+"patreon_perk_cooldown_reduction_t2": 2,
+"patreon_perk_damage_t1": 1,
+"patreon_perk_damage_t2": 2,
+"patreon_perk_evasion_t1": 1,
+"patreon_perk_evasion_t2": 2,
+"patreon_perk_lifesteal_t1": 1,
+"patreon_perk_lifesteal_t2": 2,
+"patreon_perk_mag_resist_t1": 1,
+"patreon_perk_mag_resist_t2": 2,
+"patreon_perk_spell_amp_t1": 1,
+"patreon_perk_spell_amp_t2": 2,
+"patreon_perk_spell_lifesteal_t1": 1,
+"patreon_perk_spell_lifesteal_t2": 2,
 };
 
 var patreons_game_perks_have_only_low_tier = {
-	"patreon_perk_bonus_agi_10": true,
-	"patreon_perk_bonus_str_10": true,
-	"patreon_perk_bonus_int_10": true,
+	//"patreon_perk_bonus_agi_10": true,
 }
 
 var patreonLevel = 0;
