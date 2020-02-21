@@ -3,7 +3,7 @@ LinkLuaModifier( "patreon_perk_mp_regen_3", "common/patreons_game_perk/modifier_
 LinkLuaModifier( "patreon_perk_hp_regen_1", "common/patreons_game_perk/modifier_lib/patreon_perk_hp_regen_1" ,LUA_MODIFIER_MOTION_NONE )
 LinkLuaModifier( "patreon_perk_hp_regen_3", "common/patreons_game_perk/modifier_lib/patreon_perk_hp_regen_3" ,LUA_MODIFIER_MOTION_NONE )
 LinkLuaModifier( "patreon_perk_bonus_movespeed_10", "common/patreons_game_perk/modifier_lib/patreon_perk_bonus_movespeed_10" ,LUA_MODIFIER_MOTION_NONE )
-LinkLuaModifier( "patreon_perk_bonus_movespeed_20", "common/patreons_game_perk/modifier_lib/patreon_perk_bonus_movespeed_20" ,LUA_MODIFIER_MOTION_NONE )
+LinkLuaModifier( "patreon_perk_bonus_movespeed_15", "common/patreons_game_perk/modifier_lib/patreon_perk_bonus_movespeed_15" ,LUA_MODIFIER_MOTION_NONE )
 LinkLuaModifier( "patreon_perk_bonus_agi_10", "common/patreons_game_perk/modifier_lib/patreon_perk_bonus_agi_10" ,LUA_MODIFIER_MOTION_NONE )
 LinkLuaModifier( "patreon_perk_bonus_str_10", "common/patreons_game_perk/modifier_lib/patreon_perk_bonus_str_10" ,LUA_MODIFIER_MOTION_NONE )
 LinkLuaModifier( "patreon_perk_bonus_int_10", "common/patreons_game_perk/modifier_lib/patreon_perk_bonus_int_10" ,LUA_MODIFIER_MOTION_NONE )
