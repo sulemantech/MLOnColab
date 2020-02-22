@@ -17,33 +17,39 @@ local disabledModifiers = {
 	modifier_tiny_toss = true,
 }
 
+local disabledModifiersNotInParty = {
+	modifier_tiny_toss = true,
+}
+
 function DisableHelp.ModifierGainedFilter(filterTable)
-	if filterTable.name_const == "modifier_tiny_toss" then
+	if disabledModifiers[filterTable.name_const] then
 		local parent = EntIndexToHScript(filterTable.entindex_parent_const)
 		local caster = EntIndexToHScript(filterTable.entindex_caster_const)
 		local ability = EntIndexToHScript(filterTable.entindex_ability_const)
-		local caster_id = caster:GetPlayerOwnerID()
 
-		if PlayerResource:GetPartyID(parent:GetPlayerOwnerID()) ~= PlayerResource:GetPartyID(caster_id) then
+		if PlayerResource:IsDisableHelpSetForPlayerID(parent:GetPlayerOwnerID(), caster:GetPlayerOwnerID()) then
 			ability:EndCooldown()
 			ability:RefundManaCost()
-			DisplayError(caster_id, "dota_hud_error_target_has_disable_help")
+			DisplayError(caster:GetPlayerOwnerID(), "dota_hud_error_target_has_disable_help")
 			return false
 		end
 	end
+	if disabledModifiersNotInParty[filterTable.name_const] then
+		local parent = EntIndexToHScript(filterTable.entindex_parent_const)
+		local caster = EntIndexToHScript(filterTable.entindex_caster_const)
+		local ability = EntIndexToHScript(filterTable.entindex_ability_const)
 
-	--if disabledModifiers[filterTable.name_const] then
-	--	local parent = EntIndexToHScript(filterTable.entindex_parent_const)
-	--	local caster = EntIndexToHScript(filterTable.entindex_caster_const)
-	--	local ability = EntIndexToHScript(filterTable.entindex_ability_const)
-
-	--	if PlayerResource:IsDisableHelpSetForPlayerID(parent:GetPlayerOwnerID(), caster:GetPlayerOwnerID()) then
-	--		ability:EndCooldown()
-	--		ability:RefundManaCost()
-	--		DisplayError(caster:GetPlayerOwnerID(), "dota_hud_error_target_has_disable_help")
-	--		return false
-	--	end
-	--end
+		if
+		parent:IsRealHero()
+		and (parent:GetTeam() == caster:GetTeam())
+		and PlayerResource:GetPartyID(parent:GetPlayerOwnerID()) ~= PlayerResource:GetPartyID(caster:GetPlayerOwnerID())
+		then
+			ability:EndCooldown()
+			ability:RefundManaCost()
+			DisplayError(caster:GetPlayerOwnerID(), "dota_hud_error_target_has_disable_help")
+			return false
+		end
+	end
 end
 
 local disabledAbilities = {
@@ -60,48 +66,57 @@ local disabledAbilities = {
 	tiny_toss = true,
 }
 
-function DisableHelp.ExecuteOrderFilter(orderType, ability, target, unit, orderVector)
-	if (
-		orderType == DOTA_UNIT_ORDER_CAST_POSITION and
-		unit and
-		ability and
-		ability:GetAbilityName() == "furion_sprout"
-	) then
-		local enemies = FindUnitsInRadius(
-			unit:GetTeam(),
-			orderVector,
-			nil,
-			400, 
-			DOTA_UNIT_TARGET_TEAM_ENEMY,
-			DOTA_UNIT_TARGET_HERO,
-			DOTA_UNIT_TARGET_FLAG_NONE,
-			FIND_ANY_ORDER,
-			false
-		)
+function DisableHelp.ExecuteOrderFilter(orderType, ability, target, unit, orderVector, units)
+	if not unit or not ability then
+		return
+	end
 
-		if #enemies == 0 then
-			local allies = FindUnitsInRadius(
+	local caster_id = unit:GetPlayerOwnerID()
+
+	if ability:GetAbilityName() == "furion_sprout" then
+		if (
+			orderType == DOTA_UNIT_ORDER_CAST_TARGET and
+			target and
+			target:IsRealHero() and
+			target ~= unit and
+			target:GetTeam() == unit:GetTeam()
+		) then
+			DisplayError(caster_id, "dota_hud_error_target_has_disable_help")
+			return false
+		else
+			local checkRadiusForEnemy = 160 -- ~Sprout radius
+			local enemies = FindUnitsInRadius(
 				unit:GetTeam(),
 				orderVector,
 				nil,
-				400, 
-				DOTA_UNIT_TARGET_TEAM_FRIENDLY,
+				checkRadiusForEnemy,
+				DOTA_UNIT_TARGET_TEAM_ENEMY,
 				DOTA_UNIT_TARGET_HERO,
 				DOTA_UNIT_TARGET_FLAG_NONE,
 				FIND_ANY_ORDER,
 				false
 			)
-
-			for _, hero in pairs( allies ) do
-				DisplayError(unit:GetPlayerOwnerID(), "dota_hud_error_target_has_disable_help")
-				return false
+			if #enemies == 0 then
+				local allies = FindUnitsInRadius(
+					unit:GetTeam(),
+					orderVector,
+					nil,
+					checkRadiusForEnemy,
+					DOTA_UNIT_TARGET_TEAM_FRIENDLY,
+					DOTA_UNIT_TARGET_HERO,
+					DOTA_UNIT_TARGET_FLAG_NONE,
+					FIND_ANY_ORDER,
+					false
+				)
+				if #allies > 0 then
+					DisplayError(caster_id, "dota_hud_error_target_has_disable_help")
+					return false
+				end
 			end
 		end
 	elseif (
 		orderType == DOTA_UNIT_ORDER_CAST_TARGET and
-		ability and
 		target and
-		unit and
 		disabledAbilities[ability:GetAbilityName()] and
 		PlayerResource:IsDisableHelpSetForPlayerID(target:GetPlayerOwnerID(), unit:GetPlayerOwnerID())
 	) then
