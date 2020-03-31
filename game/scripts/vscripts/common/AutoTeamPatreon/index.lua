@@ -1,7 +1,7 @@
 AutoTeam = class({})
 
 function AutoTeam:IsPatreon(pID)
-	return Patreons:GetPlayerSettings(playerId).level >= 1;
+	return Patreons:GetPlayerSettings(pID).level >= 1;
 end
 
 function AutoTeam:GetAllPlayers()
