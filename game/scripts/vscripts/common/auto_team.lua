@@ -2,6 +2,7 @@ if not _G.AutoTeam then
 	_G.AutoTeam = class({})
 	_G.AutoTeam.cache = {}
 	_G.AutoTeam.testing = false
+	_G.AutoTeam.testing_partyIndexes = {0,5} -- random party ID (0 - 5)
 end
 
 function AutoTeam:IsPatreon(pID)
@@ -9,11 +10,43 @@ function AutoTeam:IsPatreon(pID)
 end
 
 function AutoTeam:GetPatreonLevel(pID)
+
+	if _G.AutoTeam.testing then 
+		local testData = {
+			[0] = {level = 1}, -- 0 = normal player
+			[1] = {level = 2}, -- 1 = supporter
+			[2] = {level = 1}, -- 2 = high supporter
+			[3] = {level = 2},
+			[4] = {level = 1},
+			[5] = {level = 2},
+			[6] = {level = 0},
+			[7] = {level = 0},
+			[8] = {level = 0},
+			[9] = {level = 0},
+			[10] = {level = 2},
+			[11] = {level = 1},
+			[12] = {level = 2},
+			[13] = {level = 1},
+			[14] = {level = 0},
+			[15] = {level = 2},
+			[16] = {level = 1},
+			[17] = {level = 2},
+			[18] = {level = 1},
+			[19] = {level = 0},
+			[20] = {level = 0},
+			[21] = {level = 1},
+			[22] = {level = 0},
+			[23] = {level = 0},
+			[24] = {level = 0},
+		}
+		return testData[pID] and testData[pID].level or Patreons:GetPlayerSettings(pID).level
+	end
+
 	return Patreons:GetPlayerSettings(pID).level
 end
 
 function AutoTeam:GetAllPlayers()
-	if _G.AutoTeam.cache.allPlayers then 
+	if _G.AutoTeam.cache.allPlayers and not _G.AutoTeam.testing then 
 		return _G.AutoTeam.cache.allPlayers
 	end
 	local data  = {}
@@ -91,7 +124,10 @@ function AutoTeam:Index()
 	local sumLowPatreons = #lowPatreons -- count * level patreon
 	local partyPlayers = {}
 	for _,pID in pairs(allPlayers) do
-		local partyID = tostring(PlayerResource:GetPartyID(pID))
+		local partyIndexTests = _G.AutoTeam.testing_partyIndexes or {0,5}
+		local partyID = tostring(_G.AutoTeam.testing 
+			and RandomInt(partyIndexTests[1],partyIndexTests[2])
+			or PlayerResource:GetPartyID(pID))
 		partyPlayers[partyID] = partyPlayers[partyID] or {}
 		table.insert(partyPlayers[partyID],pID)
 	end
@@ -179,4 +215,11 @@ function AutoTeam:Index()
 			PlayerResource:SetCustomTeamAssignment(pID,teamID)
 		end
 	end
+end
+
+function AutoTeam:Init()
+	if _G.AutoTeam.testing then 
+		Convars:RegisterCommand( "auto_team_init", Dynamic_Wrap(AutoTeam, 'Index'), "A console command example", 0 )
+	end
+	AutoTeam:Index()
 end

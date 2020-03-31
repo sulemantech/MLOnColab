@@ -665,7 +665,7 @@ function CMegaDotaGameMode:OnGameRulesStateChange(keys)
 	local newState = GameRules:State_Get()
 
 	if newState ==  DOTA_GAMERULES_STATE_CUSTOM_GAME_SETUP then 
-		AutoTeam:Index()
+		AutoTeam:Init()
 	end
 
 	if newState == DOTA_GAMERULES_STATE_POST_GAME then
