@@ -105,8 +105,8 @@ function CMegaDotaGameMode:InitGameMode()
 	-- Adjust team limits
 	GameRules:SetCustomGameTeamMaxPlayers( DOTA_TEAM_GOODGUYS, 12 )
 	GameRules:SetCustomGameTeamMaxPlayers( DOTA_TEAM_BADGUYS, 12 )
-	GameRules:SetStrategyTime( 10.0 )
-	GameRules:SetShowcaseTime( 10.0 )
+	GameRules:SetStrategyTime( 0.0 )
+	GameRules:SetShowcaseTime( 0.0 )
 
 	-- Hook up gold & xp filters
     GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter( Dynamic_Wrap( CMegaDotaGameMode, "ItemAddedToInventoryFilter" ), self )
@@ -123,7 +123,7 @@ function CMegaDotaGameMode:InitGameMode()
 	GameRules:GetGameModeEntity():SetPauseEnabled(IsInToolsMode())
 	GameRules:SetGoldTickTime( 0.3 ) -- default is 0.6
 	GameRules:LockCustomGameSetupTeamAssignment(true)
-	GameRules:SetCustomGameSetupAutoLaunchDelay(5)
+	GameRules:SetCustomGameSetupAutoLaunchDelay(1)
 	GameRules:GetGameModeEntity():SetKillableTombstones( true )
 	GameRules:GetGameModeEntity():SetFreeCourierModeEnabled(true)
 	
