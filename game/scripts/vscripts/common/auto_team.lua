@@ -173,12 +173,10 @@ function AutoTeam:Index()
 	for teamID,players in pairs(teams) do
 		for __,pID in pairs(players) do
 			local player = PlayerResource:GetPlayer(pID)
-			GameRules:SetCustomGameTeamMaxPlayers(teamID, GameRules:GetCustomGameTeamMaxPlayers(teamID) + 1)
 			if player then 
 				player:SetTeam(teamID)
 			end
 			PlayerResource:SetCustomTeamAssignment(pID,teamID)
-			GameRules:SetCustomGameTeamMaxPlayers(teamID, GameRules:GetCustomGameTeamMaxPlayers(teamID) - 1)
 		end
 	end
 end
