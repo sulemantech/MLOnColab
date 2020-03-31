@@ -31,7 +31,7 @@ function AutoTeam:GetPatreonPlayers()
 end
 
 function AutoTeam:GetNotPatreonPlayers(patreonPlayers)
-	return AutoTeam:filter(function(pID)  return table.find(patreonPlayers, pID) == false end)
+	return AutoTeam:filter(function(pID)  return not table.find(patreonPlayers, pID) end)
 end
 
 function AutoTeam:GetValidTeam()
@@ -42,29 +42,11 @@ function AutoTeam:GetValidTeam()
 	return AutoTeam:filter(function(teamID) return GameRules:GetCustomGameTeamMaxPlayers(teamID) > 0 end,allTeams)
 end
 
-function table.find(tbl, f)
-  	for _, v in ipairs(tbl) do
-	    if f == v then
-	      	return v
-	    end
-  	end
-  	return false
-end
-
-function AutoTeam:PickRandomShuffle( reference_list, bucket )
+function AutoTeam:PickRandomShuffle( reference_list )
     if ( #reference_list == 0 ) then
         return nil
     end
-    
-    if ( #bucket == 0 ) then
-        for k, v in pairs(reference_list) do
-            bucket[k] = v
-        end
-    end
-    local pick_index = RandomInt( 1, #bucket )
-    local result = bucket[ pick_index ]
-    table.remove( bucket, pick_index )
-    return result
+    return reference_list[ RandomInt( 1, #reference_list ) ]
 end
 
 function AutoTeam:Index()
@@ -77,26 +59,27 @@ function AutoTeam:Index()
 	local teams = {}
 	for __,v in ipairs(validTeams) do teams[v] = {} end
 	for __,pID in ipairs(patreonPlayers) do
-		local team = AutoTeam:PickRandomShuffle( validTeams, {} )
+		local team = AutoTeam:PickRandomShuffle( validTeams)
 		while (#teams[team] > PatreonPerTeam) do
-			team = AutoTeam:PickRandomShuffle( validTeams, {} )
+			team = AutoTeam:PickRandomShuffle( validTeams)
 		end
 		table.insert(teams[team],pID)
 	end
 	for __,pID in ipairs(playersNoPatreons) do
-		local team = AutoTeam:PickRandomShuffle( validTeams, {} )
-		while (#teams[team] > GameRules:GetCustomGameTeamMaxPlayers(team) or playersPerTeam <= #teams[team]) do
-			team = AutoTeam:PickRandomShuffle( validTeams, {} )
+		local team = AutoTeam:PickRandomShuffle( validTeams )
+		local maxPlayers = GameRules:GetCustomGameTeamMaxPlayers(team)
+		while (#teams[team] > maxPlayers or playersPerTeam <= #teams[team]) do
+			team = AutoTeam:PickRandomShuffle( validTeams )
 		end
 		table.insert(teams[team],pID)
 	end
-	DeepPrintTable(teams)
 	for teamID,players in pairs(teams) do
 		for __,pID in pairs(players) do
 			local player = PlayerResource:GetPlayer(pID)
-			if player then
+			if player then 
 				player:SetTeam(teamID)
 			end
+			PlayerResource:SetCustomTeamAssignment(pID,teamID)
 		end
 	end
 end
