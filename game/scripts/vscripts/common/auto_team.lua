@@ -1,7 +1,16 @@
 AutoTeam = class({})
 
 function AutoTeam:IsPatreon(pID)
-	return Patreons:GetPlayerSettings(pID).level >= 1;
+	return AutoTeam:GetPatreonLevel(pID) >= 1;
+end
+
+function AutoTeam:GetPatreonLevel(pID)
+	local testData = {}
+	for i=0,30 do
+		testData[i] = { level = 2}
+	end
+	return testData[pID] and testData[pID].level or Patreons:GetPlayerSettings(pID).level
+	-- return Patreons:GetPlayerSettings(pID).level
 end
 
 function AutoTeam:GetAllPlayers()
@@ -24,6 +33,14 @@ function AutoTeam:filter(callback,iterateTable)
 		end
 	end
 	return data
+end
+
+function AutoTeam:GetHighPatreon()
+	return AutoTeam:filter(function(pID)  return AutoTeam:GetPatreonLevel(pID) == 2 end)
+end
+
+function AutoTeam:GetLowPatreon()
+	return AutoTeam:filter(function(pID)  return AutoTeam:GetPatreonLevel(pID) == 1 end)
 end
 
 function AutoTeam:GetPatreonPlayers()
@@ -50,25 +67,52 @@ function AutoTeam:PickRandomShuffle( reference_list )
 end
 
 function AutoTeam:Index()
-	local patreonPlayers = AutoTeam:GetPatreonPlayers()
-	local playersNoPatreons = AutoTeam:GetNotPatreonPlayers(patreonPlayers)
-	local amountPatreons = #patreonPlayers
+	local playersNoPatreons = AutoTeam:GetNotPatreonPlayers(AutoTeam:GetPatreonPlayers())
 	local validTeams = AutoTeam:GetValidTeam()
-	local PatreonPerTeam = amountPatreons > 0 and amountPatreons/#validTeams or 0
-	local playersPerTeam = (amountPatreons + #playersNoPatreons)/#validTeams
+	local highPatreons = AutoTeam:GetHighPatreon() -- patreons level 2
+	local lowPatreons = AutoTeam:GetLowPatreon() -- patreons level 1
+	local sumHighPatreons = #highPatreons * 2 -- count * level patreon
+	local sumLowPatreons = #lowPatreons -- count * level patreon
 	local teams = {}
 	for __,v in ipairs(validTeams) do teams[v] = {} end
-	for __,pID in ipairs(patreonPlayers) do
-		local team = AutoTeam:PickRandomShuffle( validTeams)
-		while (#teams[team] > PatreonPerTeam or playersPerTeam <= #teams[team]) do
-			team = AutoTeam:PickRandomShuffle( validTeams)
+	for __,pID in pairs(AutoTeam:GetAllPlayers()) do
+		print(PlayerResource:GetPlayer(pID):GetTeam()..' Team number')
+	end
+	local getLevelByTeam = function(teamID)
+		local amount = 0;
+		for __,pID in pairs(teams[teamID]) do
+			amount = amount + AutoTeam:GetPatreonLevel(pID)
 		end
+		return amount
+	end
+
+	local getMinLevelAllTeam = function()
+		local min = (sumHighPatreons + sumLowPatreons)
+		local _teamID = -1
+		for teamID,__ in pairs(teams) do
+			local lvl = getLevelByTeam(teamID)
+			if lvl < min then 
+				min = lvl
+				_teamID = teamID
+			end
+		end
+		return _teamID
+	end
+
+	for __,pID in pairs(highPatreons) do
+		local team = getMinLevelAllTeam() 
 		table.insert(teams[team],pID)
 	end
+
+	for __,pID in pairs(lowPatreons) do
+		local team = getMinLevelAllTeam()
+		table.insert(teams[team],pID)
+	end
+
 	for __,pID in ipairs(playersNoPatreons) do
 		local team = AutoTeam:PickRandomShuffle( validTeams )
 		local maxPlayers = GameRules:GetCustomGameTeamMaxPlayers(team)
-		while (#teams[team] > maxPlayers or playersPerTeam <= #teams[team]) do
+		while (#teams[team] >= maxPlayers) do
 			team = AutoTeam:PickRandomShuffle( validTeams )
 		end
 		table.insert(teams[team],pID)
@@ -78,8 +122,8 @@ function AutoTeam:Index()
 			local player = PlayerResource:GetPlayer(pID)
 			if player then 
 				player:SetTeam(teamID)
+				PlayerResource:SetCustomTeamAssignment(pID,teamID)
 			end
-			PlayerResource:SetCustomTeamAssignment(pID,teamID)
 		end
 	end
 end
