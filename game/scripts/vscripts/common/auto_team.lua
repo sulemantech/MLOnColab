@@ -5,12 +5,7 @@ function AutoTeam:IsPatreon(pID)
 end
 
 function AutoTeam:GetPatreonLevel(pID)
-	local testData = {}
-	for i=0,30 do
-		testData[i] = { level = 2}
-	end
-	return testData[pID] and testData[pID].level or Patreons:GetPlayerSettings(pID).level
-	-- return Patreons:GetPlayerSettings(pID).level
+	return Patreons:GetPlayerSettings(pID).level
 end
 
 function AutoTeam:GetAllPlayers()
