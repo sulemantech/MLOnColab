@@ -51,3 +51,11 @@ function table.find(tbl, f)
   	end
   	return false
 end
+
+function table.length(tbl)
+	local amount = 0
+	for __,___ in pairs(tbl) do
+		amount = amount + 1
+	end
+  	return amount
+end
