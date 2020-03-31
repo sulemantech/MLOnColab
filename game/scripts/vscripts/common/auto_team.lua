@@ -70,9 +70,6 @@ function AutoTeam:Index()
 	local sumLowPatreons = #lowPatreons -- count * level patreon
 	local teams = {}
 	for __,v in ipairs(validTeams) do teams[v] = {} end
-	for __,pID in pairs(AutoTeam:GetAllPlayers()) do
-		print(PlayerResource:GetPlayer(pID):GetTeam()..' Team number')
-	end
 	local getLevelByTeam = function(teamID)
 		local amount = 0;
 		for __,pID in pairs(teams[teamID]) do
