@@ -15,7 +15,7 @@ function AutoTeam:GetAllPlayers()
 end
 
 function AutoTeam:filter(callback,iterateTable)
-	local iterateTable = iterateTable or  AutoTeam:GetAllPlayers()
+	local iterateTable = iterateTable or AutoTeam:GetAllPlayers()
 	local data = {}
 	for __,value in pairs(iterateTable) do
 
@@ -60,7 +60,7 @@ function AutoTeam:Index()
 	for __,v in ipairs(validTeams) do teams[v] = {} end
 	for __,pID in ipairs(patreonPlayers) do
 		local team = AutoTeam:PickRandomShuffle( validTeams)
-		while (#teams[team] > PatreonPerTeam) do
+		while (#teams[team] > PatreonPerTeam or playersPerTeam <= #teams[team]) do
 			team = AutoTeam:PickRandomShuffle( validTeams)
 		end
 		table.insert(teams[team],pID)
