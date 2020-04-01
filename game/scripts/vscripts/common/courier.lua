@@ -41,13 +41,17 @@ function EditFilterToCourier(filterTable)
 		if unit:IsCourier() then
 			for i, x in pairs(filterTable.units) do
 				if filterTable.units[i] == unitEntityIndex then
-					if currentCourier then
+					if _G.trollList[playerId] then
+						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "selection_remove", { entities = { unit:GetEntityIndex() } })
+						CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(playerId), "display_custom_error", { message = "#you_cannot_control_courier" })
+						filterTable.units[i] = currentCourier
+					elseif currentCourier then
 						filterTable.units[i] = currentCourier:GetEntityIndex()
 					end
 				end
 			end
 
-			if  currentCourier and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
+			if (not _G.trollList[playerId]) and currentCourier and unit ~= currentCourier and currentCourier:IsAlive() and (not currentCourier:IsStunned()) then
 				for i = 0, 20 do
 					if filterTable.entindex_ability and currentCourier:GetAbilityByIndex(i) and ability and currentCourier:GetAbilityByIndex(i):GetName() == ability:GetName() then
 						filterTable.entindex_ability = currentCourier:GetAbilityByIndex(i):GetEntityIndex()
@@ -75,6 +79,9 @@ end
 function SearchCorrectCourier(playerID, team)
 	local currentCourier
 	local psets = Patreons:GetPlayerSettings(playerID)
+	if _G.trollList[playerID] then
+		return {}
+	end
 	if psets.level > 1 and _G.personalCouriers[playerID] and _G.personalCouriers[playerID]:IsAlive() and (not _G.personalCouriers[playerID]:IsStunned()) then
 		currentCourier = _G.personalCouriers[playerID]
 	elseif _G.mainTeamCouriers[team] and _G.mainTeamCouriers[team]:IsAlive() and (not _G.mainTeamCouriers[team]:IsStunned()) then

@@ -71,7 +71,7 @@ end
 
 function AutoTeam:getTeamMinPlayers(teams)
 	local _teamID = -1
-	local min = 150
+	local min = 90000
 	for teamID,players in pairs(teams) do
 		if min > #players then 
 			min = #players
@@ -94,25 +94,31 @@ function AutoTeam:Index()
 	local partyPlayers = {}
 	local isTestState = GameRules:State_Get() >= DOTA_GAMERULES_STATE_PRE_GAME
 	for _,pID in pairs(allPlayers) do
-		local partyID = PlayerResource:GetPartyID(pID)
+		local partyID = tostring(PlayerResource:GetPartyID(pID))
 		partyPlayers[partyID] = partyPlayers[partyID] or {}
 		table.insert(partyPlayers[partyID],pID)
 	end
 	local teams = {}
 	local playersIsParty = {}
 	for __,v in ipairs(validTeams) do teams[v] = {} end
-
 	for partyID,players in pairs(partyPlayers) do
 		if #players > 1 then 
+			if _G.AutoTeam.testing and isTestState then 
+				GameRules:SendCustomMessage('Party ID: '.. partyID,0,0)
+			end
 			local team = AutoTeam:getTeamMinPlayers(teams)
 			local maxPlayers = GameRules:GetCustomGameTeamMaxPlayers(team)
 			for _,pID in pairs(players) do
+				if _G.AutoTeam.testing and isTestState then 
+					GameRules:SendCustomMessage('	 Player: '.. PlayerResource:GetPlayerName(pID),0,0)
+				end
 				if #teams[team] >= maxPlayers then break end -- max count player in team
 				table.insert(teams[team],pID)
 				playersIsParty[pID] = true
 			end
 		end
 	end
+
 	local playersIsParty_length = table.length(playersIsParty)
 	local getLevelByTeam = function(teamID)
 		local amount = 0;
@@ -214,6 +220,7 @@ function AutoTeam:Index()
 			GameRules:SendCustomMessage('Player: '.. pID .. ' Patreon Level: ' .. AutoTeam:GetPatreonLevel(pID),0,0)
 		end
 	end
+	if isTestState then return end
 	for teamID,players in pairs(teams) do
 		for __,pID in pairs(players) do
 			local player = PlayerResource:GetPlayer(pID)
