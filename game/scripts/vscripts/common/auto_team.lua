@@ -1,10 +1,8 @@
 if not _G.AutoTeam then 
 	_G.AutoTeam = class({})
 	_G.AutoTeam.cache = {}
-	_G.AutoTeam.testing = IsInToolsMode() and false
-	_G.AutoTeam.testing_partyIndexes = {0,5} -- random party ID (0 - 5)
+	_G.AutoTeam.testing = true
 end
-
 function AutoTeam:IsPatreon(pID)
 	return AutoTeam:GetPatreonLevel(pID) >= 1;
 end
@@ -94,11 +92,9 @@ function AutoTeam:Index()
 	local sumLowPatreons = #lowPatreons -- count * level patreon
 	local avgPatreons = #allPatreons == 0 and 0 or #allPatreons/#validTeams
 	local partyPlayers = {}
+	local isTestState = GameRules:State_Get() >= DOTA_GAMERULES_STATE_PRE_GAME
 	for _,pID in pairs(allPlayers) do
-		local partyIndexTests = _G.AutoTeam.testing_partyIndexes or {0,5}
-		local partyID = tostring(_G.AutoTeam.testing 
-			and RandomInt(partyIndexTests[1],partyIndexTests[2])
-			or PlayerResource:GetPartyID(pID))
+		local partyID = PlayerResource:GetPartyID(pID)
 		partyPlayers[partyID] = partyPlayers[partyID] or {}
 		table.insert(partyPlayers[partyID],pID)
 	end
@@ -185,8 +181,8 @@ function AutoTeam:Index()
 				local settings = Patreons:GetPlayerSettings(randomPlayerID)
 				settings.level = math.min(maxLevelInTeams - lvlTeam,2)
 				lvlTeam = lvlTeam + settings.level
-				if _G.AutoTeam.testing then 
-					print('set lvl ' .. settings.level .. ' for Player by id =' .. randomPlayerID)
+				if _G.AutoTeam.testing and isTestState then 
+					GameRules:SendCustomMessage(('[authomatical] set lvl ' .. settings.level .. ' for Player by id = ' .. randomPlayerID),0,0)
 				end
 				Patreons:SetPlayerSettings(randomPlayerID, settings)
 			end
@@ -199,8 +195,8 @@ function AutoTeam:Index()
 					local oldLvl = settings.level
 					settings.level = math.min(maxLevelInTeams - lvlTeam,2)
 					lvlTeam = lvlTeam + (settings.level - oldLvl)
-					if _G.AutoTeam.testing then 
-						print('set lvl ' .. settings.level .. ' for Player by id = ' .. randomPlayerID .. ' old lvl = ' .. oldLvl)
+					if _G.AutoTeam.testing and isTestState then
+						GameRules:SendCustomMessage(('[authomatical] set lvl ' .. settings.level .. ' for Player by id = ' .. randomPlayerID .. ' old lvl = ' .. oldLvl),0,0)
 					end
 					Patreons:SetPlayerSettings(randomPlayerID, settings)
 				end
@@ -208,18 +204,14 @@ function AutoTeam:Index()
 		end
 	end
 
-	if _G.AutoTeam.testing then 
-		print('TEAMS')
-		DeepPrintTable(teams)
-		print('Party Teams')
-		DeepPrintTable(partyPlayers)
+	if _G.AutoTeam.testing and isTestState then 
 
 		for teamID,players in pairs(teams) do
-			print('Team id:' .. teamID,'sum lvl:' .. getLevelByTeam(teamID))
+			GameRules:SendCustomMessage('Team id: ' .. teamID .. ' sum lvl:' .. getLevelByTeam(teamID),0,0)
 		end
 
 		for _,pID in pairs(allPlayers) do
-			print('Player: '..pID,AutoTeam:GetPatreonLevel(pID))
+			GameRules:SendCustomMessage('Player: '.. pID .. ' Patreon Level: ' .. AutoTeam:GetPatreonLevel(pID),0,0)
 		end
 	end
 	for teamID,players in pairs(teams) do
