@@ -59,3 +59,16 @@ function table.length(tbl)
 	end
   	return amount
 end
+
+
+function table.concat(tbl1,tbl2)
+	local tbl = {}
+	for k,v in ipairs(tbl1) do
+		table.insert(tbl,v)
+	end
+	for k,v in ipairs(tbl2) do
+		table.insert(tbl,v)
+	end
+
+	return tbl
+end
