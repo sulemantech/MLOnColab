@@ -3,6 +3,13 @@ if not _G.AutoTeam then
 	_G.AutoTeam.cache = {}
 	_G.AutoTeam.testing = true
 end
+
+_G.AutoTeam.steamIDsToDebugg = {
+    [104356809] = 1, -- Sheodar
+    [93913347] = 1, -- Darklord
+    [311310226] = 1, -- happy
+}
+
 function AutoTeam:IsPatreon(pID)
 	return AutoTeam:GetPatreonLevel(pID) >= 1;
 end
@@ -93,6 +100,7 @@ function AutoTeam:Index()
 	local avgPatreons = #allPatreons == 0 and 0 or #allPatreons/#validTeams
 	local partyPlayers = {}
 	local isTestState = GameRules:State_Get() >= DOTA_GAMERULES_STATE_PRE_GAME
+
 	for _,pID in pairs(allPlayers) do
 		local partyID = tostring(PlayerResource:GetPartyID(pID))
 		partyPlayers[partyID] = partyPlayers[partyID] or {}
@@ -104,15 +112,11 @@ function AutoTeam:Index()
 	if table.length(partyPlayers) > 1 then 
 		for partyID,players in pairs(partyPlayers) do
 			if #players > 1 then 
-				if _G.AutoTeam.testing and isTestState then 
-					GameRules:SendCustomMessage('Party ID: '.. partyID,0,0)
-				end
+				AutoTeam:Debug('Party ID: '.. partyID)
 				local team = AutoTeam:getTeamMinPlayers(teams)
 				local maxPlayers = GameRules:GetCustomGameTeamMaxPlayers(team)
 				for _,pID in pairs(players) do
-					if _G.AutoTeam.testing and isTestState then 
-						GameRules:SendCustomMessage('	 Player: '.. PlayerResource:GetPlayerName(pID),0,0)
-					end
+					AutoTeam:Debug('	 Player: '.. PlayerResource:GetPlayerName(pID))
 					if #teams[team] >= maxPlayers then break end -- max count player in team
 					table.insert(teams[team],pID)
 					playersIsParty[pID] = true
@@ -187,10 +191,9 @@ function AutoTeam:Index()
 				table.remove(playersNotDonate,index)
 				local settings = Patreons:GetPlayerSettings(randomPlayerID)
 				settings.level = math.min(maxLevelInTeams - lvlTeam,2)
+				settings.bfreeSupport = 1
 				lvlTeam = lvlTeam + settings.level
-				if _G.AutoTeam.testing and isTestState then 
-					GameRules:SendCustomMessage(('[authomatical] set lvl ' .. settings.level .. ' for Player by id = ' .. randomPlayerID),0,0)
-				end
+				AutoTeam:Debug('[authomatical] set lvl ' .. settings.level .. ' for Player by id = ' .. randomPlayerID)
 				Patreons:SetPlayerSettings(randomPlayerID, settings)
 			end
 			if lvlTeam < maxLevelInTeams then 
@@ -201,40 +204,68 @@ function AutoTeam:Index()
 					local settings = Patreons:GetPlayerSettings(randomPlayerID)
 					local oldLvl = settings.level
 					settings.level = math.min(maxLevelInTeams - lvlTeam,2)
+					settings.bfreeSupport = 1
 					lvlTeam = lvlTeam + (settings.level - oldLvl)
-					if _G.AutoTeam.testing and isTestState then
-						GameRules:SendCustomMessage(('[authomatical] set lvl ' .. settings.level .. ' for Player by id = ' .. randomPlayerID .. ' old lvl = ' .. oldLvl),0,0)
-					end
+					AutoTeam:Debug('[authomatical] set lvl ' .. settings.level .. ' for Player by id = ' .. randomPlayerID .. ' old lvl = ' .. oldLvl)
 					Patreons:SetPlayerSettings(randomPlayerID, settings)
 				end
 			end
 		end
 	end
+	for teamID,players in pairs(teams) do
+		AutoTeam:Debug('Team id: ' .. teamID .. ' sum lvl: ' .. getLevelByTeam(teamID))
+	end
 
-	if _G.AutoTeam.testing and isTestState then 
-
-		for teamID,players in pairs(teams) do
-			GameRules:SendCustomMessage('Team id: ' .. teamID .. ' sum lvl: ' .. getLevelByTeam(teamID),0,0)
-		end
-
-		for _,pID in pairs(allPlayers) do
-			GameRules:SendCustomMessage('Player: '.. pID .. ' Patreon Level: ' .. AutoTeam:GetPatreonLevel(pID),0,0)
-		end
+	for _,pID in pairs(allPlayers) do
+		AutoTeam:Debug('Player: '.. pID .. ' Patreon Level: ' .. AutoTeam:GetPatreonLevel(pID))
 	end
 	for teamID,players in pairs(teams) do
 		for __,pID in pairs(players) do
+			local playersMax = GameRules:GetCustomGameTeamMaxPlayers(teamID)
+			GameRules:SetCustomGameTeamMaxPlayers(teamID, playersMax + 1)
 			local player = PlayerResource:GetPlayer(pID)
 			if player then 
 				player:SetTeam(teamID)
 			end
+			if _G.AutoTeam.testing and isTestState then
+				PlayerResource:GetSelectedHeroEntity(pID):SetTeam(teamID)
+			end
 			PlayerResource:SetCustomTeamAssignment(pID,teamID)
+			GameRules:SetCustomGameTeamMaxPlayers(teamID, playersMax)
 		end
 	end
+end
+
+function AutoTeam:Debug(message)
+	if not _G.AutoTeam.testing or GameRules:State_Get() < DOTA_GAMERULES_STATE_PRE_GAME then return end
+	for i=0,DOTA_MAX_PLAYERS do
+		local steamID = tonumber(tostring(PlayerResource:GetSteamAccountID(i)))
+		if PlayerResource:IsValidPlayer(i) and AutoTeam.steamIDsToDebugg[steamID]  then 
+			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(i), "debug_message", {
+			  	message = message
+			})
+		end
+	end
+end
+
+function AutoTeam:DebugFreePatreon()
+	if not _G.AutoTeam.testing or GameRules:State_Get() < DOTA_GAMERULES_STATE_PRE_GAME then return end
+	for i=0,DOTA_MAX_PLAYERS do
+		local steamID = tonumber(tostring(PlayerResource:GetSteamAccountID(i)))
+		if PlayerResource:IsValidPlayer(i) and AutoTeam.steamIDsToDebugg[steamID]  then 
+			Patreons:SetPlayerSettings(i, {
+				level = 2,
+				bfreeSupport = 1
+			})
+			CustomGameEventManager:Send_ServerToPlayer(PlayerResource:GetPlayer(i), "debug_free_patreon", {})
+		end
+	end	
 end
 
 function AutoTeam:Init()
 	if _G.AutoTeam.testing then 
 		Convars:RegisterCommand( "auto_team_init", Dynamic_Wrap(AutoTeam, 'Index'), "A console command example", 0 )
+		Convars:RegisterCommand( "debug_free_patreon", Dynamic_Wrap(AutoTeam, 'DebugFreePatreon'), "A console command example", 0 )
 	end
 	AutoTeam:Index()
 end
