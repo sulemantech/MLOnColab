@@ -408,7 +408,6 @@ function OnMouseOut(num) {
     $("#WHTooltip").visible = false;
 }
 
-
 (function() {
 	GameUI.CustomUIConfig().chatWheelLoaded = true;
 
